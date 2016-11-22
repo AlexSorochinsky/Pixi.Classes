@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Filename : Screen.js
 //-----------------------------------------------------------------------------
 // Language : Javascript
@@ -15,6 +15,8 @@ var Screen = new Class({
 		App.registerScreen(this);
 
 		this._containers = [];
+
+		this._dom_containers = {};
 
 		this._emitters = [];
 
@@ -40,7 +42,23 @@ var Screen = new Class({
 
 		_.each(this.Containers, function(container_params) {
 
-			container_params.type = 'container';
+			if (!container_params.type) container_params.type = 'container';
+
+			if (container_params.type == 'dom-container') this.buildDOMContainer(container_params);
+
+			else this.buildContainer(container_params);
+
+		}, this);
+
+		this.updateTime = App.time;
+
+		this.isBuild = true;
+
+		Broadcast.call(this.Name + ' build');
+
+	},
+
+	buildContainer: function(container_params) {
 
 			var container_name = container_params.name;
 
@@ -59,14 +77,6 @@ var Screen = new Class({
 			container.visible = false;
 
 			this.buildChilds(container_objects, container);
-
-		}, this);
-
-		this.updateTime = App.time;
-
-		this.isBuild = true;
-
-		Broadcast.call(this.Name + ' build');
 
 	},
 
@@ -144,10 +154,17 @@ var Screen = new Class({
 
 		}
 
-		if (object_params.event || object_params.button) this.enableEvents(child, _.isString(object_params.event) ? object_params.event : (_.isString(object_params.button) ? object_params.button : object_params.name), object_params.button);
+		var event_params = object_params.event || object_params.button;
+
+		if (event_params) this.enableEvents(child, _.isString(object_params.event) ? object_params.event : (_.isString(object_params.button) ? object_params.button : object_params.name), event_params, object_params.button);
 
 		if (object_params.button) {
 			child.defaultCursor = 'pointer';
+			child.buttonMode = true;
+		}
+
+		if (event_params && event_params.cursor) {
+			child.defaultCursor = event_params.cursor;
 			child.buttonMode = true;
 		}
 
@@ -183,6 +200,217 @@ var Screen = new Class({
 
 	},
 
+	buildDOMContainer: function(container_params, z_index) {
+
+		var container_name = container_params.name;
+
+		var container = this._dom_containers[container_name] = this[container_name] = {
+			el: document.createElement('div'),
+			els: {},
+			x: 0,
+			y: 0,
+			transformOrigin: container_params.transformOrigin || ['center', 'center'],
+			applyTransform: function() {
+
+				this.positionTransform = 'translate('+Math.round(this.x)+'px, '+Math.round(this.y)+'px)';
+
+				var transform_origin = this.transformOrigin.join(' ');
+				var transform = this.positionTransform;
+
+				if (transform_origin != this._transform_origin) {
+					this.el.style.transformOrigin = transform_origin;
+					this._transform_origin = transform_origin;
+				}
+
+				if (transform != this._transform) {
+					this.el.style.WebkitTransform = transform;
+					this.el.style.transform = transform;
+					this._transform = transform;
+				}
+
+			}
+		};
+
+		//Mixin.Transform.Create(container);
+
+		//Mixin.Scale.Create(container);
+
+		container.el.className = 'dom-container ' + container_name.toLowerCase();
+
+		container.name = container_name;
+
+		container.width = container_params.width;
+
+		container.height = container_params.height;
+
+		container.scale = container_params.scale;
+
+		this.buildDOMChilds(container_name, container_params.childs);
+
+		return container;
+
+	},
+
+	buildDOMChilds: function(container_name, dom_childs) {
+
+		_.each(dom_childs, function(params) {
+
+			if (params[2] && params[2].template) {
+
+				this.registerDomObjectPool(params[0], params[1])
+
+			} else {
+
+				var dom_structure = this.createDOMStructure(params);
+
+				dom_structure.name = params[1];
+
+				dom_structure.params = params;
+
+				this._dom_containers[container_name].el.appendChild(dom_structure.el);
+
+				_.extend(this._dom_containers[container_name].els, dom_structure.els);
+
+			}
+
+		}, this);
+
+	},
+
+	createDOMStructure: function(params, els) {
+
+		if (!els) els = {};
+
+		if (_.isString(params)) {
+
+			var text = document.createTextNode(params);
+
+			return {el: text, els: els};
+
+		}
+
+		var el = document.createElement(params[0]);
+
+		el.className = params[1];
+
+		if (!els[el.className]) els[el.className] = el;
+		else if (_.isArray(els[el.className])) els[el.className].push(el);
+		else els[el.className] = [els[el.className], el];
+
+		if (_.isObject(params[2])) {
+
+			if (params[2].scale) el._scaleStyles = params[2].scale;
+
+			if (params[2].event) this.applyDOMEvents(el, params[2].event, params);
+
+			if (params[2].attrs) this.applyDOMAttributes(el, params[2].attrs);
+
+		}
+
+		var last_param = params[params.length-1];
+
+		if (_.isString(last_param) && params.length > 2) el.innerHTML = last_param;
+
+		else if (_.isArray(last_param)) _.each(last_param, function(params) {
+
+			el.appendChild(this.createDOMStructure(params, els).el);
+
+		}, this);
+
+		return {el: el, els: els};
+
+	},
+
+	applyDOMEvents: function (el, code, params) {
+
+		var name = this.Name;
+
+		if (App.IsTouchDevice) {
+
+			el.addEventListener("touchstart", function (e) {
+
+				var clickpos = Screen.prototype.getMousePositionDistance(e);
+
+				this.setAttribute('clickpos', clickpos);
+
+			}, false);
+
+			el.addEventListener("touchend", function (e) {
+
+				var clickpos = Screen.prototype.getMousePositionDistance(e);
+
+				if (Math.abs(parseFloat(this.getAttribute('clickpos')) - clickpos) < 20) Broadcast.fireEvent(name + ' ' + code + ' click', [e, el]);
+
+			}, false);
+
+		}
+
+		else {
+
+			el.addEventListener("click", function(e) {
+
+				Broadcast.call(name + ' ' + code + ' click', [e, el, params]);
+
+			}, false);
+
+			el.addEventListener("mouseup", function(e) {
+
+				if (params[2].event) Screen.PressEndEvents.push(params[2].event);
+
+				Broadcast.call(name + ' ' + code + ' click', [e, el, params]);
+
+			}, false);
+
+		}
+
+	},
+
+	getMousePositionDistance: function (e) {
+
+		e = e || window.event;
+
+		var pageX, pageY;
+
+		if (e.changedTouches && e.changedTouches[0]) {
+
+			pageX = e.changedTouches[0].pageX;
+
+			pageY = e.changedTouches[0].pageY;
+
+		} else {
+
+			pageX = e.pageX;
+
+			pageY = e.pageY;
+
+		}
+
+		if (pageX === undefined) {
+
+			if ('clientX' in e) {
+
+				pageX = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+
+				pageY = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+
+			}
+
+		}
+
+		return Math.sqrt(pageX * pageX + pageY * pageY);
+
+	},
+
+	applyDOMAttributes: function(el, attrs) {
+
+		_.each(attrs, function(value, name) {
+
+			el.setAttribute(name, value);
+
+		});
+
+	},
+
 	update: function() {
 
 		this.updateTimeOffset = App.time - this.updateTime;
@@ -201,6 +429,8 @@ var Screen = new Class({
 
 	resize: function() {
 
+		this.Scale = App.Scale;
+
 		this.resizeChilds(this.Containers);
 
 		if (this.isBuild) Broadcast.call(this.Name + ' resize');
@@ -211,9 +441,67 @@ var Screen = new Class({
 
 		_.each(childs, function(child_params) {
 
+			if (child_params.type == 'container') {
+
 			this.resizeChild(child_params);
 
 			if (child_params.childs) this.resizeChilds(child_params.childs);
+
+			}
+
+			if (child_params.type == 'dom-container') {
+
+				var container = this._dom_containers[child_params.name];
+
+				//var container_width = container.width;
+				//var container_height = container.height;
+
+				var scale = App.Scale;
+
+				if (child_params.scale) {
+
+					if (!_.isArray(child_params.scale)) child_params.scale = [child_params.scale];
+
+					if (child_params.scale[0] == 'min-less') {
+
+						var width = child_params.scale[1] || App.Width;
+						var height = child_params.scale[2] || App.Height;
+
+						scale = Math.min(App.Width / width, App.Height / height);
+
+						if (scale > 1) scale = 1;
+
+					}
+
+				}
+
+				if (child_params.position) {
+
+					container.x = this.calculate(child_params.position[0]);
+					container.y = this.calculate(child_params.position[1]);
+
+				} else {
+
+					container.x = (App.Width / App.PixelRatio) * 0.5;
+					container.y = (App.Height / App.PixelRatio) * 0.5;
+
+				}
+
+				container.applyTransform();
+
+				this.scaleStyles(container.els, scale);
+
+				/*_.each(container.DomObjects, function(dom_object_props) {
+
+					var dom_object = this[dom_object_props[0]];
+
+					if (dom_object) this.scaleStyles(dom_object.els, scale);
+
+				}, this);*/
+
+				//if (child_params.childs) this.resizeDOMChilds(child_params.childs);
+
+			}
 
 		}, this);
 
@@ -285,9 +573,61 @@ var Screen = new Class({
 
 	},
 
-	calculate: function(value) {
+	scaleStyles: function(els, scale) {
+
+		_.each(els, function(inner_els) {
+
+			if (!_.isArray(inner_els)) inner_els = [inner_els];
+
+			_.each(inner_els, function(el) {
+
+				var styles = el._scaleStyles;
+
+				_.each(styles, function(style_params, style) {
+
+					this.scaleStyle(el, style, style_params, scale);
+
+				}, this);
+
+			}, this);
+
+		}, this);
+
+	},
+
+	scaleStyle: function(el, style, style_params, scale) {
+
+		if (!_.isArray(style_params)) style_params = [style_params];
+
+		var values = _.map(style_params, function(style_param) {
+
+			if (_.contains(style_param, ['px', '%'])) return style_param;
+
+			var v = this.calculate(style_param, scale, 1 / App.PixelRatio);
+
+			return v;
+
+		}, this);
+
+		values = _.map(values, function(value) {
+
+			if (_.isNumber(value)) return ((value > 0) ? Math.ceil(value) : Math.floor(value)) + 'px';
+
+		});
+
+		el.style[style] = values.join(' ');
+
+		//console.log(el, style, style_params, scale, values, values.join(' '));
+
+	},
+
+	calculate: function(value, fixed_multiplier, special_multiplier) {
 
 		if (!value) value = 0;
+
+		if (!fixed_multiplier) fixed_multiplier = 1;
+
+		if (!special_multiplier) special_multiplier = 1;
 
 		if (!_.isArray(value)) value = [value];
 
@@ -297,23 +637,23 @@ var Screen = new Class({
 
 			if (_.isString(part)) {
 
-				if (part == 'width') result += App.Width;
+				if (part == 'width') result += App.Width * special_multiplier;
 
-				else if (part == 'height') result += App.Height;
+				else if (part == 'height') result += App.Height * special_multiplier;
 
-				else if (part == 'scale') result += App.Scale;
+				else if (part == 'scale') result += App.Scale * special_multiplier;
 
-				else if (part.indexOf('width/') === 0) result += App.Width / parseFloat(part.replace('width/', ''));
+				else if (part.indexOf('width/') === 0) result += App.Width / parseFloat(part.replace('width/', '')) * special_multiplier;
 
-				else if (part.indexOf('height/') === 0) result += App.Height / parseFloat(part.replace('height/', ''));
+				else if (part.indexOf('height/') === 0) result += App.Height / parseFloat(part.replace('height/', '')) * special_multiplier;
 
-				else if (part.indexOf('scale/') === 0) result += App.Scale / parseFloat(part.replace('scale/', ''));
+				else if (part.indexOf('scale/') === 0) result += App.Scale / parseFloat(part.replace('scale/', '')) * special_multiplier;
 
-				else if (part.indexOf('scale*') === 0) result += App.Scale * parseFloat(part.replace('scale*', ''));
+				else if (part.indexOf('scale*') === 0) result += App.Scale * parseFloat(part.replace('scale*', '')) * special_multiplier;
 
 			} else {
 
-				result += part;
+				result += part * fixed_multiplier;
 
 			}
 
@@ -329,7 +669,7 @@ var Screen = new Class({
 
 	},
 
-	enableEvents: function(sprite, name, button_params) {
+	enableEvents: function(sprite, name, event_params, button_params) {
 
 		sprite.interactive = true;
 
@@ -364,9 +704,17 @@ var Screen = new Class({
 
 		};
 
+		var on_move_call = function() {
+
+			Broadcast.call(this.Name + ' ' + name + ' move', [sprite, arguments[0], arguments[1]]);
+
+		};
+
 		var on_down_change = function() {
 
-			var down_sprite = this[button_params.down];
+			var down = _.result(this, event_params.down);
+
+			var down_sprite = this[down];
 
 			if (down_sprite) {
 
@@ -379,12 +727,44 @@ var Screen = new Class({
 
 		var on_up_change = function() {
 
-			var down_sprite = this[button_params.down];
+			var down = _.result(this, event_params.down);
+
+			var down_sprite = this[down];
 
 			if (down_sprite) {
 
 				sprite.alpha = 1;
 				down_sprite.visible = false;
+
+			}
+
+		};
+
+		var on_over_change = function() {
+
+			var over = _.result(this, event_params.over);
+
+			var over_sprite = this[over];
+
+			if (over_sprite) {
+
+				sprite.alpha = 0.01;
+				over_sprite.visible = true;
+
+			}
+
+		};
+
+		var on_out_change = function() {
+
+			var over = _.result(this, event_params.over);
+
+			var over_sprite = this[over];
+
+			if (over_sprite) {
+
+				sprite.alpha = 1;
+				over_sprite.visible = false;
 
 			}
 
@@ -396,6 +776,13 @@ var Screen = new Class({
 				.on('touchstart', _.bind(on_down_call, this))
 				.on('touchend', _.bind(on_up_call, this))
 				.on('touchendoutside', _.bind(on_up_out_call, this));
+
+			if (event_params.move) {
+
+				sprite
+					.on('touchmove', _.bind(on_move_call, this))
+
+			}
 
 			if (button_params) {
 
@@ -415,12 +802,21 @@ var Screen = new Class({
 				.on('mouseover', _.bind(on_over_call, this))
 				.on('mouseout', _.bind(on_out_call, this));
 
+			if (event_params.move) {
+
+				sprite
+					.on('mousemove', _.bind(on_move_call, this))
+
+			}
+
 			if (button_params) {
 
 				sprite
 					.on('mousedown', _.bind(on_down_change, this))
 					.on('mouseup', _.bind(on_up_change, this))
-					.on('mouseupoutside', _.bind(on_up_change, this));
+					.on('mouseupoutside', _.bind(on_up_change, this))
+					.on('mouseover', _.bind(on_over_change, this))
+					.on('mouseout', _.bind(on_out_change, this));
 
 			}
 
@@ -428,7 +824,7 @@ var Screen = new Class({
 
 	},
 
-	startAnimation: function(animation_name) {
+	startAnimation: function(animation_name, delay, next) {
 
 		if (!this._anims[animation_name]) this._anims[animation_name] = {_tweens: [], _delays: [], _duration: 0};
 
@@ -444,7 +840,7 @@ var Screen = new Class({
 
 				_.each(animation_line_params[0], function(target_name) {
 
-					var result = this._animate(animation_name, this[target_name], this.Animations[animation_line_params[1]], animation_line_params[2]);
+					var result = this._animate(animation_name, this[target_name], this.Animations[animation_line_params[1]], animation_line_params[2] + (delay || 0));
 
 					if (duration < result.duration) duration = result.duration;
 
@@ -455,22 +851,26 @@ var Screen = new Class({
 			clearTimeout(this._anims[animation_name].endTimeout);
 			this._anims[animation_name].endTimeout = setTimeout(_.bind(function() {
 
-				this.stopAnimation(animation_name);
+				this.stopAnimation(animation_name, false);
+
+				if (next) next.apply(this, []);
 
 			}, this), duration);
 
 		} else {
 
-			var result = this._animate(animation_name, this[animation_props.target], animation_props);
+			var result = this._animate(animation_name, this[animation_props.target], animation_props,  delay || 0);
 
 			clearTimeout(this._anims[animation_name].endTimeout);
 			this._anims[animation_name].endTimeout = setTimeout(_.bind(function() {
 
-				this.stopAnimation(animation_name);
+				this.stopAnimation(animation_name, false);
 
 				if (animation_props.complete) this._animateSet(animation_props.complete, this[animation_props.target]);
 
-				if (animation_props.next) this.startAnimation(animation_props.next);
+				if (animation_props.next) this.startAnimation(animation_props.next, 0, next);
+
+				else if (next) next.apply(this, []);
 
 			}, this), result.duration);
 
@@ -557,14 +957,18 @@ var Screen = new Class({
 
 	},
 
-	stopAnimation: function(animation_name) {
+	stopAnimation: function(animation_name, is_stop_tweens) {
 
 		if (this._anims[animation_name]) {
 
 			clearTimeout(this._anims[animation_name].endTimeout);
 
+			if (is_stop_tweens !== false) {
+
 			var tweens = this._anims[animation_name]._tweens;
 			for (var i=0, l=tweens.length; i<l; i++) tweens[i].kill();
+
+			}
 
 			var delays = this._anims[animation_name]._delays;
 			for (i=0, l=delays.length; i<l; i++) clearTimeout(delays[i]);
@@ -578,6 +982,12 @@ var Screen = new Class({
 		this.showed = true;
 
 		for (var i=0; this._containers[i]; i++) this._containers[i].visible = true;
+
+		_.each(this._dom_containers, function(dom_container) {
+
+			document.body.appendChild(dom_container.el);
+
+		});
 
 		this.resize();
 
@@ -595,6 +1005,12 @@ var Screen = new Class({
 
 		for (var i=0; this._containers[i]; i++) this._containers[i].visible = false;
 
+		_.each(this._dom_containers, function(dom_container) {
+
+			if (dom_container.el.parentNode) dom_container.el.parentNode.removeChild(dom_container.el);
+
+		});
+
 		Broadcast.off("Game Update", this.update, this);
 
 		Broadcast.off("Game Resize", this.resize, this);
@@ -604,3 +1020,12 @@ var Screen = new Class({
 	}
 
 }); 
+Screen.PressEndEvents = [];
+
+Broadcast.on("Document Press Up", function(e) {
+
+	Broadcast.call("Global Press End", [e, Screen.PressEndEvents]);
+
+	Screen.PressEndEvents = [];
+
+}, this);
