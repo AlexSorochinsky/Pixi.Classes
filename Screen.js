@@ -28,7 +28,7 @@ var Screen = new Class({
 
 			Broadcast.on(name, function() {
 
-				func.apply(this, arguments);
+				if (name.indexOf(this.Name) === 0 || this.showed) func.apply(this, arguments);
 
 			}, this);
 
@@ -441,14 +441,6 @@ var Screen = new Class({
 
 		_.each(childs, function(child_params) {
 
-			if (child_params.type == 'container') {
-
-			this.resizeChild(child_params);
-
-			if (child_params.childs) this.resizeChilds(child_params.childs);
-
-			}
-
 			if (child_params.type == 'dom-container') {
 
 				var container = this._dom_containers[child_params.name];
@@ -458,22 +450,7 @@ var Screen = new Class({
 
 				var scale = App.Scale;
 
-				if (child_params.scale) {
-
-					if (!_.isArray(child_params.scale)) child_params.scale = [child_params.scale];
-
-					if (child_params.scale[0] == 'min-less') {
-
-						var width = child_params.scale[1] || App.Width;
-						var height = child_params.scale[2] || App.Height;
-
-						scale = Math.min(App.Width / width, App.Height / height);
-
-						if (scale > 1) scale = 1;
-
-					}
-
-				}
+				if (child_params.scaleStrategy) scale = this.getScaleByStrategy(child_params.scaleStrategy);
 
 				if (child_params.position) {
 
@@ -500,6 +477,12 @@ var Screen = new Class({
 				}, this);*/
 
 				//if (child_params.childs) this.resizeDOMChilds(child_params.childs);
+
+			} else {
+
+				this.resizeChild(child_params);
+
+				if (child_params.childs) this.resizeChilds(child_params.childs);
 
 			}
 
@@ -546,7 +529,15 @@ var Screen = new Class({
 
 			if (child.type == 'emitter') child.startScale = child.endScale = 1;
 
-			else if (child.type == 'container') child.scale.set(App.Scale);
+			else if (child.type == 'container') {
+
+				var scale = App.Scale;
+
+				if (child_params.scaleStrategy) scale = this.getScaleByStrategy(child_params.scaleStrategy);
+
+				child.scale.set(scale);
+
+			}
 
 			else child.scale.set(1);
 
@@ -570,6 +561,38 @@ var Screen = new Class({
 			}
 
 		}
+
+	},
+
+	getScaleByStrategy: function(scale_strategy) {
+
+		var scale = 1,
+			width = App.Width,
+			height = App.Height;
+
+		if (!_.isArray(scale_strategy)) scale_strategy = [scale_strategy];
+
+		if (scale_strategy[0] == 'fit-to-screen') {
+
+			if (scale_strategy[1]) width = scale_strategy[1];
+			if (scale_strategy[2]) height = scale_strategy[2];
+
+			scale = Math.min(App.Width / width, App.Height / height);
+
+			if (scale > 1 && scale_strategy[3] !== false) scale = 1;
+
+		} else if (scale_strategy[0] == 'cover-screen') {
+
+			if (scale_strategy[1]) width = scale_strategy[1];
+			if (scale_strategy[2]) height = scale_strategy[2];
+
+			scale = Math.max(App.Width / width, App.Height / height);
+
+			if (scale > 1 && scale_strategy[3] !== false) scale = 1;
+
+		}
+
+		return scale;
 
 	},
 
@@ -712,9 +735,7 @@ var Screen = new Class({
 
 		var on_down_change = function() {
 
-			var down = _.result(this, event_params.down);
-
-			var down_sprite = this[down];
+			var down_sprite = _.result(this, event_params.down);
 
 			if (down_sprite) {
 
@@ -727,9 +748,7 @@ var Screen = new Class({
 
 		var on_up_change = function() {
 
-			var down = _.result(this, event_params.down);
-
-			var down_sprite = this[down];
+			var down_sprite = _.result(this, event_params.down);
 
 			if (down_sprite) {
 
@@ -742,9 +761,7 @@ var Screen = new Class({
 
 		var on_over_change = function() {
 
-			var over = _.result(this, event_params.over);
-
-			var over_sprite = this[over];
+			var over_sprite = _.result(this, event_params.over);
 
 			if (over_sprite) {
 
@@ -757,9 +774,7 @@ var Screen = new Class({
 
 		var on_out_change = function() {
 
-			var over = _.result(this, event_params.over);
-
-			var over_sprite = this[over];
+			var over_sprite = _.result(this, event_params.over);
 
 			if (over_sprite) {
 
@@ -1020,6 +1035,7 @@ var Screen = new Class({
 	}
 
 }); 
+
 Screen.PressEndEvents = [];
 
 Broadcast.on("Document Press Up", function(e) {
