@@ -40,6 +40,7 @@ var Game = new Class({
 
 		this.Renderer = PIXI.autoDetectRenderer(300, 300, {
 			clearBeforeRender: true,
+			transparent: this.StageBackgroundColor ? false : true,
 			backgroundColor: this.StageBackgroundColor
 		});
 
