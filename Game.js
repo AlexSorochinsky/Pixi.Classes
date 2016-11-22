@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Filename : Game.js
 //-----------------------------------------------------------------------------
 // Language : Javascript
@@ -45,6 +45,8 @@ var Game = new Class({
 
 		this.MainStage = new PIXI.Stage();
 
+		this.resources = {};
+
 		this.preload();
 
 	},
@@ -82,6 +84,8 @@ var Game = new Class({
 
 		var load_images = function () {
 
+			if (loader._queue.tasks.length > 0) {
+
 			loader.load(_.bind(function (loader, resources) {
 
 				App.resources = resources;
@@ -89,6 +93,12 @@ var Game = new Class({
 				App.create();
 
 			}, this));
+
+			} else {
+
+				App.create();
+
+			}
 
 		};
 
@@ -138,9 +148,9 @@ var Game = new Class({
 
 		document.body.appendChild(this.Renderer.view);
 
-		this.ready();
-
 		this.resize(true);
+
+		this.ready();
 
 		requestAnimationFrame(_.bind(this.update, this));
 
