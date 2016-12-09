@@ -18,6 +18,8 @@ var Screen = new Class({
 
 		this._dom_containers = {};
 
+		this._dom_object_pools = {};
+
 		this._emitters = [];
 
 		this._anims = {};
@@ -140,6 +142,12 @@ var Screen = new Class({
 
 			this._emitters.push(child);
 
+		} else if (object_params.type == 'text') {
+
+			child = new PIXI.Text(object_params.text, object_params.styles);
+
+			container.addChild(child);
+
 		} else if (object_params.type == 'bitmap-text') {
 
 			child = new PIXI.extras.BitmapText(object_params.text, object_params.styles);
@@ -231,10 +239,6 @@ var Screen = new Class({
 			}
 		};
 
-		//Mixin.Transform.Create(container);
-
-		//Mixin.Scale.Create(container);
-
 		container.el.className = 'dom-container ' + container_name.toLowerCase();
 
 		container.name = container_name;
@@ -255,12 +259,6 @@ var Screen = new Class({
 
 		_.each(dom_childs, function(params) {
 
-			if (params[2] && params[2].template) {
-
-				this.registerDomObjectPool(params[0], params[1])
-
-			} else {
-
 				var dom_structure = this.createDOMStructure(params);
 
 				dom_structure.name = params[1];
@@ -270,8 +268,6 @@ var Screen = new Class({
 				this._dom_containers[container_name].el.appendChild(dom_structure.el);
 
 				_.extend(this._dom_containers[container_name].els, dom_structure.els);
-
-			}
 
 		}, this);
 
@@ -289,6 +285,8 @@ var Screen = new Class({
 
 		}
 
+		if (_.isObject(params[2]) && params[2].template) return this.registerDOMObjectPool(params[1], params);
+
 		var el = document.createElement(params[0]);
 
 		el.className = params[1];
@@ -303,7 +301,7 @@ var Screen = new Class({
 
 			if (params[2].event) this.applyDOMEvents(el, params[2].event, params);
 
-			if (params[2].attrs) this.applyDOMAttributes(el, params[2].attrs);
+			if (params[2].attr) this.applyDOMAttributes(el, params[2].attr);
 
 		}
 
@@ -313,7 +311,9 @@ var Screen = new Class({
 
 		else if (_.isArray(last_param)) _.each(last_param, function(params) {
 
-			el.appendChild(this.createDOMStructure(params, els).el);
+			var inner_dom_structure = this.createDOMStructure(params, els);
+
+			if (inner_dom_structure) el.appendChild(inner_dom_structure.el);
 
 		}, this);
 
@@ -321,9 +321,13 @@ var Screen = new Class({
 
 	},
 
-	applyDOMEvents: function (el, code, params) {
+	applyDOMEvents: function (el, event_params, child_params) {
 
-		var name = this.Name;
+		if (_.isString(event_params)) event_params = {name: event_params};
+
+		var code = event_params.name,
+			name = this.Name,
+			_this = this;
 
 		if (App.IsTouchDevice) {
 
@@ -343,25 +347,65 @@ var Screen = new Class({
 
 			}, false);
 
-		}
+		} else {
 
-		else {
+			el.addEventListener("mouseover", function(e) {
 
-			el.addEventListener("click", function(e) {
+				Broadcast.call(name + ' ' + code + ' over', [e, el, child_params]);
 
-				Broadcast.call(name + ' ' + code + ' click', [e, el, params]);
+			}, false);
+
+			el.addEventListener("mouseout", function(e) {
+
+				Broadcast.call(name + ' ' + code + ' out', [e, el, child_params]);
+
+			}, false);
+
+			el.addEventListener("mousedown", function(e) {
+
+				Broadcast.call(name + ' ' + code + ' down', [e, el, child_params]);
 
 			}, false);
 
 			el.addEventListener("mouseup", function(e) {
 
-				if (params[2].event) Screen.PressEndEvents.push(params[2].event);
+				Screen.PressEndEvents.push(code);
 
-				Broadcast.call(name + ' ' + code + ' click', [e, el, params]);
+				Broadcast.call(name + ' ' + code + ' up', [e, el, child_params]);
+
+			}, false);
+
+			el.addEventListener("click", function(e) {
+
+				Broadcast.call(name + ' ' + code + ' click', [e, el, child_params]);
 
 			}, false);
 
 		}
+
+		el.addEventListener("change", function(e) {
+
+			Broadcast.call(name + ' ' + code + ' change', [e, el, child_params]);
+
+		}, false);
+
+		el.addEventListener("keypress", function(e) {
+
+			Broadcast.call(name + ' ' + code + ' keypress', [e, el, child_params]);
+
+		}, false);
+
+		el.addEventListener("keydown", function(e) {
+
+			Broadcast.call(name + ' ' + code + ' keydown', [e, el, child_params]);
+
+		}, false);
+
+		el.addEventListener("keyup", function(e) {
+
+			Broadcast.call(name + ' ' + code + ' keyup', [e, el, child_params]);
+
+		}, false);
 
 	},
 
@@ -401,9 +445,9 @@ var Screen = new Class({
 
 	},
 
-	applyDOMAttributes: function(el, attrs) {
+	applyDOMAttributes: function(el, attributes) {
 
-		_.each(attrs, function(value, name) {
+		_.each(attributes, function(value, name) {
 
 			el.setAttribute(name, value);
 
@@ -445,12 +489,9 @@ var Screen = new Class({
 
 				var container = this._dom_containers[child_params.name];
 
-				//var container_width = container.width;
-				//var container_height = container.height;
-
 				var scale = App.Scale;
 
-				if (child_params.scaleStrategy) scale = this.getScaleByStrategy(child_params.scaleStrategy);
+				if (child_params.scaleStrategy) scale = container.scale = this.getScaleByStrategy(child_params.scaleStrategy);
 
 				if (child_params.position) {
 
@@ -466,17 +507,7 @@ var Screen = new Class({
 
 				container.applyTransform();
 
-				this.scaleStyles(container.els, scale);
-
-				/*_.each(container.DomObjects, function(dom_object_props) {
-
-					var dom_object = this[dom_object_props[0]];
-
-					if (dom_object) this.scaleStyles(dom_object.els, scale);
-
-				}, this);*/
-
-				//if (child_params.childs) this.resizeDOMChilds(child_params.childs);
+				this.scaleStyles(container.el.getElementsByTagName('*'), scale);
 
 			} else {
 
@@ -556,7 +587,11 @@ var Screen = new Class({
 
 				child.mask.beginFill(0x000000);
 
+				child.mask.alpha = 0;
+
 				child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
+
+				if (child_params.mask[5] === true) child.addChild(child.mask);
 
 			}
 
@@ -604,11 +639,13 @@ var Screen = new Class({
 
 			_.each(inner_els, function(el) {
 
+				el._scale = scale || el._scale;
+
 				var styles = el._scaleStyles;
 
 				_.each(styles, function(style_params, style) {
 
-					this.scaleStyle(el, style, style_params, scale);
+					this.scaleStyle(el, style, style_params, el._scale);
 
 				}, this);
 
@@ -624,11 +661,7 @@ var Screen = new Class({
 
 		var values = _.map(style_params, function(style_param) {
 
-			if (_.contains(style_param, ['px', '%'])) return style_param;
-
-			var v = this.calculate(style_param, scale, 1 / App.PixelRatio);
-
-			return v;
+			return this.calculate(style_param, scale, 1 / App.PixelRatio);
 
 		}, this);
 
@@ -636,11 +669,94 @@ var Screen = new Class({
 
 			if (_.isNumber(value)) return ((value > 0) ? Math.ceil(value) : Math.floor(value)) + 'px';
 
+			else return value;
+
 		});
 
 		el.style[style] = values.join(' ');
 
 		//console.log(el, style, style_params, scale, values, values.join(' '));
+
+	},
+
+	setStyles: function(el, styles) {
+
+		_.extend(el._scaleStyles, styles);
+
+		this.scaleStyles([el]);
+
+	},
+
+	registerDOMObjectPool: function(pool_name, dom_objects_props) {
+
+		dom_objects_props = _.clone(dom_objects_props);
+
+		delete dom_objects_props[2].template;
+
+		this._dom_object_pools[pool_name] = {
+			name: pool_name,
+			domObjectProps: dom_objects_props,
+			domObjects: []
+		};
+
+	},
+
+	getDOMObjectFromPool: function(pool_name) {
+
+		var pool = this._dom_object_pools[pool_name];
+
+		var objects = pool.domObjects,
+			free_object = null;
+
+		_.each(objects, function(object) {
+
+			if (!object.el.parentNode) free_object = object;
+
+		});
+
+		if (free_object) {
+
+			return free_object;
+
+		}
+
+		return this.createDOMObjectForPool(pool_name);
+
+	},
+
+	createDOMObjectForPool: function(pool_name) {
+
+		var pool = this._dom_object_pools[pool_name];
+
+		var dom_object = this.createDOMStructure(pool.domObjectProps);
+
+		pool.domObjects.push(dom_object);
+
+		return dom_object;
+
+	},
+
+	removePoolDOMObjects: function(pool_name, parent) {
+
+		this.eachPoolDOMObjects(pool_name, parent, function(object) {
+
+			object.el.parentNode.removeChild(object.el);
+
+		});
+
+	},
+
+	eachPoolDOMObjects: function(pool_name, parent, next) {
+
+		var pool = this._dom_object_pools[pool_name];
+
+		var pool_objects = pool.domObjects;
+
+		_.each(pool_objects, function(object) {
+
+			if (object.el.parentNode && (parent === true || object.el.parentNode === parent)) next.apply(this, [object]);
+
+		});
 
 	},
 
@@ -660,19 +776,35 @@ var Screen = new Class({
 
 			if (_.isString(part)) {
 
-				if (part == 'width') result += App.Width * special_multiplier;
+				var direction_multiplier = 1;
 
-				else if (part == 'height') result += App.Height * special_multiplier;
+				if (part.indexOf('-') === 0) {
 
-				else if (part == 'scale') result += App.Scale * special_multiplier;
+					part = part.substr(1);
 
-				else if (part.indexOf('width/') === 0) result += App.Width / parseFloat(part.replace('width/', '')) * special_multiplier;
+					direction_multiplier = -1;
 
-				else if (part.indexOf('height/') === 0) result += App.Height / parseFloat(part.replace('height/', '')) * special_multiplier;
+				}
 
-				else if (part.indexOf('scale/') === 0) result += App.Scale / parseFloat(part.replace('scale/', '')) * special_multiplier;
+				if (part == 'width') result += App.Width * special_multiplier * direction_multiplier;
 
-				else if (part.indexOf('scale*') === 0) result += App.Scale * parseFloat(part.replace('scale*', '')) * special_multiplier;
+				else if (part == 'height') result += App.Height * special_multiplier * direction_multiplier;
+
+				else if (part == 'scale') result += App.Scale * special_multiplier * direction_multiplier;
+
+				else if (part.indexOf('width/') === 0) result += App.Width / parseFloat(part.replace('width/', '')) * special_multiplier * direction_multiplier;
+
+				else if (part.indexOf('height/') === 0) result += App.Height / parseFloat(part.replace('height/', '')) * special_multiplier * direction_multiplier;
+
+				else if (part.indexOf('scale/') === 0) result += App.Scale / parseFloat(part.replace('scale/', '')) * special_multiplier * direction_multiplier;
+
+				else if (part.indexOf('scale*') === 0) result += App.Scale * parseFloat(part.replace('scale*', '')) * special_multiplier * direction_multiplier;
+
+				else result = part;
+
+			} else if (_.isFunction(part)) {
+
+				result += part.apply(this, []);
 
 			} else {
 
@@ -881,6 +1013,8 @@ var Screen = new Class({
 
 				this.stopAnimation(animation_name, false);
 
+				if (!("complete" in animation_props)) animation_props.complete = animation_props.animate;
+
 				if (animation_props.complete) this._animateSet(animation_props.complete, this[animation_props.target]);
 
 				if (animation_props.next) this.startAnimation(animation_props.next, 0, next);
@@ -901,7 +1035,7 @@ var Screen = new Class({
 
 		_.each(animation_props.animate, function(to_object) {
 
-			var tween_vars = {overwrite: 'concurrent', ease: to_object[4] || Power0.easeNone},
+			var tween_vars = {overwrite: 'auto', ease: to_object[4] || Power0.easeNone},
 				end_time = to_object[2] + (to_object[3] ? to_object[3] : 0) + (additional_delay || 0);
 
 			if (to_object[0] == 'position') {
@@ -918,9 +1052,9 @@ var Screen = new Class({
 
 				this._animateProperty(animation_name, target.scale, tween_vars, to_object[2] / 1000, (to_object[3] || 0) + (additional_delay || 0));
 
-			} else if (to_object[0] == 'alpha') {
+			} else if (to_object[0] in target) {
 
-				tween_vars.alpha = to_object[1];
+				tween_vars[to_object[0]] = to_object[1];
 
 				this._animateProperty(animation_name, target, tween_vars, to_object[2] / 1000, (to_object[3] || 0) + (additional_delay || 0));
 
@@ -946,9 +1080,9 @@ var Screen = new Class({
 
 				target.scale.set(this.calculate(set_object[1]), this.calculate(set_object[1]));
 
-			} else if (set_object[0] == 'alpha') {
+			} else if (set_object[0] in target) {
 
-				target.alpha = this.calculate(set_object[1]);
+				target[set_object[0]] = this.calculate(set_object[1]);
 
 			}
 
@@ -956,7 +1090,7 @@ var Screen = new Class({
 
 	},
 
-	_animateProperty: function(animation_name, object, props, time, delay, ease) {
+	_animateProperty: function(animation_name, object, props, time, delay) {
 
 		if (this._anims[animation_name]) {
 
