@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 // Language : Javascript
 // Date of creation : 05.09.2016
-// Require: Class.js
+// Require: Class.js, TweenJS
 //-----------------------------------------------------------------------------
 // Abstract Pixi game constructor with main functionality
 //-----------------------------------------------------------------------------
@@ -37,6 +37,8 @@ var Game = new Class({
 	Screens: [], //Array of game screen objects
 
 	start: function () {
+
+		createjs.Ticker.timingMode = createjs.Ticker.RAF;
 
 		this.Renderer = PIXI.autoDetectRenderer(300, 300, {
 			clearBeforeRender: true,
@@ -167,13 +169,11 @@ var Game = new Class({
 
 		this.ready();
 
-		requestAnimationFrame(_.bind(this.update, this));
+		createjs.Ticker.addEventListener("tick", _.bind(this.update, this));
 
 	},
 
 	update: function () {
-
-		requestAnimationFrame(_.bind(this.update, this));
 
 		this.time = Date.now();
 
@@ -220,6 +220,8 @@ var Game = new Class({
 	loadSounds: function (sounds) {
 
 		if (!sounds || sounds.length == 0) return;
+
+		if (!createjs.Sound) throw new Error('SoundJS not found!');
 
 		for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
 
