@@ -44,22 +44,25 @@ var Game = new Class({
 			backgroundColor: this.StageBackgroundColor
 		});
 
-		this.MainStage = new PIXI.Stage();
+		this.MainStage = new PIXI.Container();
 
 		this.resources = {};
 
 		this.preload();
 
+		this.addRendererEvents();
+
 	},
 
 	preload: function () {
 
-		if (this.initialize) this.initialize();
+		if (this.prepare) this.prepare();
 
 		var loader = new PIXI.loaders.Loader();
 
 		var fonts = [],
-			sounds = [];
+			sounds = [],
+			images = [];
 
 		_.each(this.Screens, function (screen) {
 
@@ -77,23 +80,32 @@ var Game = new Class({
 
 					else if (asset.type == 'sound') sounds.push([asset.name, App.srcURL + asset.url + '?v=' + this.Version]);
 
+					else if (asset.type == 'dom-image') images.push(App.srcURL + asset.url);
+
 				}, this);
 
 			}
 
 		}, this);
 
+		_.each(images, function(url) {
+
+			var img = new Image();
+			img.src = url;
+
+		});
+
 		var load_images = function () {
 
-			if (loader._queue.tasks.length > 0) {
+			if (_.size(loader.resources) > 0) {
 
-			loader.load(_.bind(function (loader, resources) {
+				loader.load(_.bind(function (loader, resources) {
 
-				App.resources = resources;
+					App.resources = resources;
 
-				App.create();
+					App.create();
 
-			}, this));
+				}, this));
 
 			} else {
 
@@ -151,6 +163,8 @@ var Game = new Class({
 
 		this.resize(true);
 
+		this.isReady = true;
+
 		this.ready();
 
 		requestAnimationFrame(_.bind(this.update, this));
@@ -205,6 +219,8 @@ var Game = new Class({
 
 	loadSounds: function (sounds) {
 
+		if (!sounds || sounds.length == 0) return;
+
 		for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
 
 		createjs.Sound.on("fileload", function(event) {
@@ -248,6 +264,52 @@ var Game = new Class({
 	stop: function(name, delay) {
 
 
+
+	},
+
+	addRendererEvents: function() {
+
+		if (App.IsTouchDevice) {
+
+			App.Renderer.view.addEventListener("touchstart", function(e) {
+
+				Broadcast.call("Stage Press Down", [e]);
+
+			}, false);
+
+			App.Renderer.view.addEventListener("touchend", function(e) {
+
+				Broadcast.call("Stage Press Up", [e]);
+
+			}, false);
+
+			App.Renderer.view.addEventListener("touchmove", function(e) {
+
+				Broadcast.call("Stage Press Move", [e]);
+
+			}, false);
+
+		} else {
+
+			App.Renderer.view.addEventListener("mousedown", function(e) {
+
+				Broadcast.call("Stage Press Down", [e]);
+
+			}, false);
+
+			App.Renderer.view.addEventListener("mouseup", function(e) {
+
+				Broadcast.call("Stage Press Up", [e]);
+
+			}, false);
+
+			App.Renderer.view.addEventListener("mousemove", function(e) {
+
+				Broadcast.call("Stage Press Move", [e]);
+
+			}, false);
+
+		}
 
 	}
 
