@@ -627,6 +627,8 @@ var Screen = new Class({
 
 		}
 
+		}
+
 		return scale;
 
 	},
