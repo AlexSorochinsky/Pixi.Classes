@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Filename : Service.js
 //-----------------------------------------------------------------------------
 // Language : Javascript
@@ -30,7 +30,11 @@ Service.prototype = {
 
 	checkAction: function(data) {
 
-		if (data.Action && this.Actions[data.Action]) this.Actions[data.Action].apply(this, [data]);
+		_.each(this.Actions, function(fn, key) {
+
+			if (key in data) fn.apply(this, [data[key], data]);
+
+		}, this);
 
 	}
 
