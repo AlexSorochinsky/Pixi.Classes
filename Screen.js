@@ -16,13 +16,11 @@ var Screen = new Class({
 
 		this._containers = [];
 
-		this._dom_containers = {};
-
-		this._dom_object_pools = {};
-
 		this._emitters = [];
 
 		this._anims = {};
+
+		this._tweens = {};
 
 		this.state = 'idle';
 
@@ -40,15 +38,25 @@ var Screen = new Class({
 
 	build: function() {
 
+		if (!this.Tweens) this.Tweens = {};
+
 		Broadcast.call(this.Name + ' before build');
 
 		_.each(this.Containers, function(container_params) {
 
 			if (!container_params.type) container_params.type = 'container';
 
-			if (container_params.type == 'dom-container') this.buildDOMContainer(container_params);
+			if (container_params.type == 'container') {
 
-			else this.buildContainer(container_params);
+				var container = this.buildChild(App.Stage, container_params);
+
+				this._containers.push(container);
+
+				container.visible = false;
+
+				if (container_params.childs) this.buildChilds(container_params.childs, container);
+
+			}
 
 		}, this);
 
@@ -57,28 +65,6 @@ var Screen = new Class({
 		this.isBuild = true;
 
 		Broadcast.call(this.Name + ' build');
-
-	},
-
-	buildContainer: function(container_params) {
-
-			var container_name = container_params.name;
-
-			var container_objects = container_params.childs;
-
-			var container = this[container_name] = new PIXI.Container();
-
-			container.type = container_params.type;
-
-			container._child_params = container_params;
-
-			App.MainStage.addChild(container);
-
-			this._containers.push(container);
-
-			container.visible = false;
-
-			this.buildChilds(container_objects, container);
 
 	},
 
@@ -94,17 +80,17 @@ var Screen = new Class({
 
 	},
 
-	buildChild: function(container, child_params) {
+	buildChild: function(container, child_params, is_reposition) {
 
 		var child;
 
 		if (child_params.type == 'sprite') {
 
-			if (child_params.image) child = new PIXI.Sprite(App.resources[child_params.image].texture);
+			if (child_params.image && App.resources[child_params.image]) child = new PIXI.Sprite(App.resources[child_params.image].texture);
 
-			else if (child_params.frame) {
+			else if (child_params.frame || child_params.image) {
 
-				child = PIXI.Sprite.fromFrame(child_params.frame);
+				child = PIXI.Sprite.fromFrame(child_params.frame || child_params.image);
 
 			}
 
@@ -160,15 +146,64 @@ var Screen = new Class({
 
 			container.addChild(child);
 
+		} else if (child_params.type == 'graphics') {
+
+			child = new PIXI.Graphics();
+
+			if (!_.isArray(child_params.draw[0])) child_params.draw = [child_params.draw];
+
+			_.each(child_params.draw, function(shape) {
+
+				if (shape[0] == 'rect') {
+
+					child.beginFill(shape[5]);
+
+					child.drawRect(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]), this.calculate(shape[4]));
+
+				}
+
+			}, this);
+
+			container.addChild(child);
+
+		} else if (child_params.type == 'movie-clip') {
+
+			var frames = _.map(child_params.frames, function(image) {
+
+				return App.resources[image] ? App.resources[image].texture : PIXI.Texture.fromFrame(image);
+
+			});
+
+			child = new PIXI.extras.MovieClip(frames);
+
+			child.animationSpeed = child_params.speed || 1;
+
+			container.addChild(child);
+
 		}
 
 		var event_params = child_params.event || child_params.button;
 
-		if (event_params) this.enableEvents(child, _.isString(child_params.event) ? child_params.event : (_.isString(child_params.button) ? child_params.button : child_params.name), event_params, child_params.button);
+		if (event_params) {
 
-		if (child_params.button) {
+			if (event_params === true) event_params = {name: child_params.name};
+
+			else if (_.isString(event_params)) event_params = {name: event_params};
+
+			if (child_params.button) event_params.button = true;
+
+			if (!event_params.name) event_params.name = child_params.name;
+
+			this.enableEvents(child, event_params);
+
+			if (event_params.button) {
+
 			child.defaultCursor = 'pointer';
+
 			child.buttonMode = true;
+
+			}
+
 		}
 
 		if (event_params && event_params.cursor) {
@@ -200,9 +235,17 @@ var Screen = new Class({
 
 				child.mask.beginFill(0x000000);
 
+				if (child_params.mask[5] === true) {
+
+					child.mask.drawRect(child_params.mask[1], child_params.mask[2], child_params.mask[3], child_params.mask[4]);
+
+					child.addChild(child.mask);
+
+				} else {
+
 				child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
 
-				if (child_params.mask[5] === true) child.addChild(child.mask);
+				}
 
 			} else if (child_params.mask[0] == 'sprite') {
 
@@ -212,11 +255,8 @@ var Screen = new Class({
 
 				child.mask = this.buildChild(child.parent, child_params.mask[1]);
 
-			} else if (child_params.mask[0] == 'existing-sprite') {
-
-				if (!this[child_params.mask[1]]) throw new Error('Sprite not found in sprite mask definition. ' + this.Name + ' > ' + child_params.name);
-
-				child.mask = this[child_params.mask[1]];
+				//Recreate texture to prevent blinking effect (possible Pixi bug?)
+				child.mask.texture = PIXI.Texture.fromCanvas(child.mask.texture.baseTexture.source);
 
 			}
 
@@ -227,261 +267,23 @@ var Screen = new Class({
 			else child.anchor.set(0.5, 0.5);
 		}
 
-		child.name = child_params.name;
+		if (child_params.tint) child.tint = child_params.tint;
+
 		child.type = child_params.type;
+
+		if (child_params.name) {
 
 		this[child_params.name] = child;
 
+			child.name = child_params.name;
+
+		}
+
 		child._child_params = child_params;
 
+		if (is_reposition) this.resizeChild(child);
+
 		return child;
-
-	},
-
-	buildDOMContainer: function(container_params, z_index) {
-
-		var container_name = container_params.name;
-
-		var container = this._dom_containers[container_name] = this[container_name] = {
-			el: document.createElement('div'),
-			els: {},
-			x: 0,
-			y: 0,
-			transformOrigin: container_params.transformOrigin || ['center', 'center'],
-			applyTransform: function() {
-
-				this.positionTransform = 'translate('+Math.round(this.x)+'px, '+Math.round(this.y)+'px)';
-
-				var transform_origin = this.transformOrigin.join(' ');
-				var transform = this.positionTransform;
-
-				if (transform_origin != this._transform_origin) {
-					this.el.style.transformOrigin = transform_origin;
-					this._transform_origin = transform_origin;
-				}
-
-				if (transform != this._transform) {
-					this.el.style.WebkitTransform = transform;
-					this.el.style.transform = transform;
-					this._transform = transform;
-				}
-
-			}
-		};
-
-		container.el.className = 'dom-container ' + container_name.toLowerCase();
-
-		container.name = container_name;
-
-		container.width = container_params.width;
-
-		container.height = container_params.height;
-
-		container.scale = container_params.scale;
-
-		this.buildDOMChilds(container_name, container_params.childs);
-
-		return container;
-
-	},
-
-	buildDOMChilds: function(container_name, dom_childs) {
-
-		_.each(dom_childs, function(params) {
-
-				var dom_structure = this.createDOMStructure(params);
-
-				dom_structure.name = params[1];
-
-				dom_structure.params = params;
-
-				this._dom_containers[container_name].el.appendChild(dom_structure.el);
-
-				_.extend(this._dom_containers[container_name].els, dom_structure.els);
-
-		}, this);
-
-	},
-
-	createDOMStructure: function(params, els) {
-
-		if (!els) els = {};
-
-		if (_.isString(params)) {
-
-			var text = document.createTextNode(params);
-
-			return {el: text, els: els};
-
-		}
-
-		if (_.isObject(params[2]) && params[2].template) return this.registerDOMObjectPool(params[1], params);
-
-		var el = document.createElement(params[0]);
-
-		el.className = params[1];
-
-		if (!els[el.className]) els[el.className] = el;
-		else if (_.isArray(els[el.className])) els[el.className].push(el);
-		else els[el.className] = [els[el.className], el];
-
-		if (_.isObject(params[2])) {
-
-			if (params[2].scale) el._scaleStyles = params[2].scale;
-
-			if (params[2].event) this.applyDOMEvents(el, params[2].event, params);
-
-			if (params[2].attr) this.applyDOMAttributes(el, params[2].attr);
-
-		}
-
-		var last_param = params[params.length-1];
-
-		if (_.isString(last_param) && params.length > 2) el.innerHTML = last_param;
-
-		else if (_.isArray(last_param)) _.each(last_param, function(params) {
-
-			var inner_dom_structure = this.createDOMStructure(params, els);
-
-			if (inner_dom_structure) el.appendChild(inner_dom_structure.el);
-
-		}, this);
-
-		return {el: el, els: els};
-
-	},
-
-	applyDOMEvents: function (el, event_params, child_params) {
-
-		if (_.isString(event_params)) event_params = {name: event_params};
-
-		var code = event_params.name,
-			name = this.Name,
-			_this = this;
-
-		if (App.IsTouchDevice) {
-
-			el.addEventListener("touchstart", function (e) {
-
-				var clickpos = Screen.prototype.getMousePositionDistance(e);
-
-				this.setAttribute('clickpos', clickpos);
-
-			}, false);
-
-			el.addEventListener("touchend", function (e) {
-
-				var clickpos = Screen.prototype.getMousePositionDistance(e);
-
-				if (Math.abs(parseFloat(this.getAttribute('clickpos')) - clickpos) < 20) Broadcast.fireEvent(name + ' ' + code + ' click', [e, el]);
-
-			}, false);
-
-		} else {
-
-			el.addEventListener("mouseover", function(e) {
-
-				Broadcast.call(name + ' ' + code + ' over', [e, el, child_params]);
-
-			}, false);
-
-			el.addEventListener("mouseout", function(e) {
-
-				Broadcast.call(name + ' ' + code + ' out', [e, el, child_params]);
-
-			}, false);
-
-			el.addEventListener("mousedown", function(e) {
-
-				Broadcast.call(name + ' ' + code + ' down', [e, el, child_params]);
-
-			}, false);
-
-			el.addEventListener("mouseup", function(e) {
-
-				Screen.PressEndEvents.push(code);
-
-				Broadcast.call(name + ' ' + code + ' up', [e, el, child_params]);
-
-			}, false);
-
-			el.addEventListener("click", function(e) {
-
-				Broadcast.call(name + ' ' + code + ' click', [e, el, child_params]);
-
-			}, false);
-
-		}
-
-		el.addEventListener("change", function(e) {
-
-			Broadcast.call(name + ' ' + code + ' change', [e, el, child_params]);
-
-		}, false);
-
-		el.addEventListener("keypress", function(e) {
-
-			Broadcast.call(name + ' ' + code + ' keypress', [e, el, child_params]);
-
-		}, false);
-
-		el.addEventListener("keydown", function(e) {
-
-			Broadcast.call(name + ' ' + code + ' keydown', [e, el, child_params]);
-
-		}, false);
-
-		el.addEventListener("keyup", function(e) {
-
-			Broadcast.call(name + ' ' + code + ' keyup', [e, el, child_params]);
-
-		}, false);
-
-	},
-
-	getMousePositionDistance: function (e) {
-
-		e = e || window.event;
-
-		var pageX, pageY;
-
-		if (e.changedTouches && e.changedTouches[0]) {
-
-			pageX = e.changedTouches[0].pageX;
-
-			pageY = e.changedTouches[0].pageY;
-
-		} else {
-
-			pageX = e.pageX;
-
-			pageY = e.pageY;
-
-		}
-
-		if (pageX === undefined) {
-
-			if ('clientX' in e) {
-
-				pageX = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-
-				pageY = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-
-			}
-
-		}
-
-		return Math.sqrt(pageX * pageX + pageY * pageY);
-
-	},
-
-	applyDOMAttributes: function(el, attributes) {
-
-		_.each(attributes, function(value, name) {
-
-			el.setAttribute(name, value);
-
-		});
 
 	},
 
@@ -505,7 +307,21 @@ var Screen = new Class({
 
 		this.Scale = App.Scale;
 
-		this.resizeChilds(this.Containers);
+		if (this.isBuild) Broadcast.call(this.Name + ' before resize');
+
+		_.each(this.Containers, function(child_params) {
+
+			if (child_params.type == 'container') {
+
+				var child = this[child_params.name];
+
+				if (child) this.resizeChild(child);
+
+				if (child_params.childs) this.resizeChilds(child_params.childs);
+
+			}
+
+		}, this);
 
 		if (this.isBuild) Broadcast.call(this.Name + ' resize');
 
@@ -515,45 +331,19 @@ var Screen = new Class({
 
 		_.each(childs, function(child_params) {
 
-			if (child_params.type == 'dom-container') {
+			var child = this[child_params.name];
 
-				var container = this._dom_containers[child_params.name];
-
-				var scale = App.Scale;
-
-				if (child_params.scaleStrategy) scale = container.scale = this.getScaleByStrategy(child_params.scaleStrategy);
-
-				if (child_params.position) {
-
-					container.x = this.calculate(child_params.position[0]);
-					container.y = this.calculate(child_params.position[1]);
-
-				} else {
-
-					container.x = (App.Width / App.PixelRatio) * 0.5;
-					container.y = (App.Height / App.PixelRatio) * 0.5;
-
-				}
-
-				container.applyTransform();
-
-				this.scaleStyles(container.el.getElementsByTagName('*'), scale);
-
-			} else {
-
-				this.resizeChild(child_params);
+			if (child) this.resizeChild(child);
 
 				if (child_params.childs) this.resizeChilds(child_params.childs);
-
-			}
 
 		}, this);
 
 	},
 
-	resizeChild: function(child_params) {
+	resizeChild: function(child) {
 
-		var child = this[child_params.name];
+		var child_params = child._child_params;
 
 		if ('position' in child_params) {
 
@@ -605,6 +395,7 @@ var Screen = new Class({
 		}
 
 		if ('alpha' in child_params) child.alpha = this.calculate(child_params.alpha);
+		if ('rotation' in child_params) child.rotation = this.calculate(child_params.rotation);
 
 		if ('width' in child_params) child.width = this.calculate(child_params.width);
 		if ('height' in child_params) child.height = this.calculate(child_params.height);
@@ -613,17 +404,19 @@ var Screen = new Class({
 
 			if (child_params.mask[0] == 'rect') {
 
+				if (child_params.mask[5] !== true) {
+
 				child.mask.clear();
 
 				child.mask.beginFill(0x000000);
 
 				child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
 
+				}
+
 			} else if (child_params.mask[0] == 'sprite') {
 
-				this.resizeChild(child_params.mask[1]);
-
-			} else if (child_params.mask[0] == 'existing-sprite') {
+				this.resizeChild(child.mask);
 
 		}
 
@@ -662,135 +455,6 @@ var Screen = new Class({
 		}
 
 		return scale;
-
-	},
-
-	scaleStyles: function(els, scale) {
-
-		_.each(els, function(inner_els) {
-
-			if (!_.isArray(inner_els)) inner_els = [inner_els];
-
-			_.each(inner_els, function(el) {
-
-				el._scale = scale || el._scale;
-
-				var styles = el._scaleStyles;
-
-				_.each(styles, function(style_params, style) {
-
-					this.scaleStyle(el, style, style_params, el._scale);
-
-				}, this);
-
-			}, this);
-
-		}, this);
-
-	},
-
-	scaleStyle: function(el, style, style_params, scale) {
-
-		if (!_.isArray(style_params)) style_params = [style_params];
-
-		var values = _.map(style_params, function(style_param) {
-
-			return this.calculate(style_param, scale, 1 / App.PixelRatio);
-
-		}, this);
-
-		values = _.map(values, function(value) {
-
-			if (_.isNumber(value)) return ((value > 0) ? Math.ceil(value) : Math.floor(value)) + 'px';
-
-			else return value;
-
-		});
-
-		el.style[style] = values.join(' ');
-
-		//console.log(el, style, style_params, scale, values, values.join(' '));
-
-	},
-
-	setStyles: function(el, styles) {
-
-		_.extend(el._scaleStyles, styles);
-
-		this.scaleStyles([el]);
-
-	},
-
-	registerDOMObjectPool: function(pool_name, dom_objects_props) {
-
-		dom_objects_props = _.clone(dom_objects_props);
-
-		delete dom_objects_props[2].template;
-
-		this._dom_object_pools[pool_name] = {
-			name: pool_name,
-			domObjectProps: dom_objects_props,
-			domObjects: []
-		};
-
-	},
-
-	getDOMObjectFromPool: function(pool_name) {
-
-		var pool = this._dom_object_pools[pool_name];
-
-		var objects = pool.domObjects,
-			free_object = null;
-
-		_.each(objects, function(object) {
-
-			if (!object.el.parentNode) free_object = object;
-
-		});
-
-		if (free_object) {
-
-			return free_object;
-
-		}
-
-		return this.createDOMObjectForPool(pool_name);
-
-	},
-
-	createDOMObjectForPool: function(pool_name) {
-
-		var pool = this._dom_object_pools[pool_name];
-
-		var dom_object = this.createDOMStructure(pool.domObjectProps);
-
-		pool.domObjects.push(dom_object);
-
-		return dom_object;
-
-	},
-
-	removePoolDOMObjects: function(pool_name, parent) {
-
-		this.eachPoolDOMObjects(pool_name, parent, function(object) {
-
-			object.el.parentNode.removeChild(object.el);
-
-		});
-
-	},
-
-	eachPoolDOMObjects: function(pool_name, parent, next) {
-
-		var pool = this._dom_object_pools[pool_name];
-
-		var pool_objects = pool.domObjects;
-
-		_.each(pool_objects, function(object) {
-
-			if (object.el.parentNode && (parent === true || object.el.parentNode === parent)) next.apply(this, [object]);
-
-		});
 
 	},
 
@@ -858,13 +522,17 @@ var Screen = new Class({
 
 	},
 
-	enableEvents: function(sprite, name, event_params, button_params) {
+	enableEvents: function (sprite, event_params) {
+
+		var name = event_params.name;
 
 		sprite.interactive = true;
 
 		var on_down_call = function() {
 
 			Broadcast.call(this.Name + ' ' + name + ' down', [sprite, arguments[0], arguments[1]]);
+
+			if (event_params.press) start_press_event.apply(this, [arguments[0], arguments[1], event_params.press]);
 
 		};
 
@@ -873,11 +541,15 @@ var Screen = new Class({
 			Broadcast.call(this.Name + ' ' + name + ' up', [sprite, arguments[0], arguments[1]]);
 			Broadcast.call(this.Name + ' ' + name + ' click', [sprite, arguments[0], arguments[1]]);
 
+			if (event_params.press) stop_press_event();
+
 		};
 
 		var on_up_out_call = function() {
 
 			Broadcast.call(this.Name + ' ' + name + ' up outside', [sprite, arguments[0], arguments[1]]);
+
+			if (event_params.press) stop_press_event();
 
 		};
 
@@ -891,6 +563,8 @@ var Screen = new Class({
 
 			Broadcast.call(this.Name + ' ' + name + ' out', [sprite, arguments[0], arguments[1]]);
 
+			if (event_params.press) stop_press_event();
+
 		};
 
 		var on_move_call = function() {
@@ -899,14 +573,41 @@ var Screen = new Class({
 
 		};
 
+		var on_wheel_call = function() {
+
+			Broadcast.call(this.Name + ' ' + name + ' wheel', [sprite, arguments[0], arguments[1]]);
+
+		};
+
 		var on_down_change = function() {
 
-			var down_sprite = _.result(this, event_params.down);
+			var down = event_params.down;
 
-			if (down_sprite) {
+			if (down) {
 
-				sprite.alpha = 0.01;
-				down_sprite.visible = true;
+				if (_.isFunction(down)) down = down.apply(this, []);
+
+				if (down) {
+
+					var actions = _.isArray(down) ? down : [down];
+
+					if (!_.isArray(actions[0])) actions = [actions];
+
+					for (var i = 0; actions[i]; i++) {
+
+						var action = actions[i];
+
+						var tween = this.Tweens[action[0]];
+
+						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<down> definition.');
+
+						if (!action[1]) action[1] = sprite;
+
+						this.tween(action[0], action[1]);
+
+					}
+
+				}
 
 			}
 
@@ -914,12 +615,33 @@ var Screen = new Class({
 
 		var on_up_change = function() {
 
-			var down_sprite = _.result(this, event_params.down);
+			var up = event_params.up;
 
-			if (down_sprite) {
+			if (up) {
 
-				sprite.alpha = 1;
-				down_sprite.visible = false;
+				if (_.isFunction(up)) up = up.apply(this, []);
+
+				if (up) {
+
+					var actions = _.isArray(up) ? up : [up];
+
+					if (!_.isArray(actions[0])) actions = [actions];
+
+					for (var i = 0; actions[i]; i++) {
+
+						var action = actions[i];
+
+						var tween = this.Tweens[action[0]];
+
+						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<up> definition.');
+
+						if (!action[1]) action[1] = sprite;
+
+						this.tween(action[0], action[1]);
+
+					}
+
+				}
 
 			}
 
@@ -927,12 +649,33 @@ var Screen = new Class({
 
 		var on_over_change = function() {
 
-			var over_sprite = _.result(this, event_params.over);
+			var over = event_params.over;
 
-			if (over_sprite) {
+			if (over) {
 
-				sprite.alpha = 0.01;
-				over_sprite.visible = true;
+				if (_.isFunction(over)) over = over.apply(this, []);
+
+				if (over) {
+
+					var actions = _.isArray(over) ? over : [over];
+
+					if (!_.isArray(actions[0])) actions = [actions];
+
+					for (var i = 0; actions[i]; i++) {
+
+						var action = actions[i];
+
+						var tween = this.Tweens[action[0]];
+
+						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<over> definition.');
+
+						if (!action[1]) action[1] = sprite;
+
+						this.tween(action[0], action[1]);
+
+					}
+
+				}
 
 			}
 
@@ -940,14 +683,53 @@ var Screen = new Class({
 
 		var on_out_change = function() {
 
-			var over_sprite = _.result(this, event_params.over);
+			var out = event_params.out;
 
-			if (over_sprite) {
+			if (out) {
 
-				sprite.alpha = 1;
-				over_sprite.visible = false;
+				if (_.isFunction(out)) out = out.apply(this, []);
+
+				if (out) {
+
+					var actions = _.isArray(out) ? out : [out];
+
+					if (!_.isArray(actions[0])) actions = [actions];
+
+					for (var i = 0; actions[i]; i++) {
+
+						var action = actions[i];
+
+						var tween = this.Tweens[action[0]];
+
+						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<out> definition.');
+
+						if (!action[1]) action[1] = sprite;
+
+						this.tween(action[0], action[1]);
+
+					}
+
+				}
 
 			}
+
+		};
+
+		var start_press_event = function(e, object, interval) {
+
+			Broadcast.call(this.Name + ' ' + name + ' press', [sprite, e, object]);
+
+			sprite.pressInterval = setInterval(function() {
+
+				Broadcast.call(this.Name + ' ' + name + ' press', [sprite, e, object]);
+
+			}.bind(this), interval);
+
+		};
+
+		var stop_press_event = function() {
+
+			clearInterval(sprite.pressInterval);
 
 		};
 
@@ -965,7 +747,7 @@ var Screen = new Class({
 
 			}
 
-			if (button_params) {
+			if (event_params.down || event_params.up) {
 
 				sprite
 					.on('touchstart', _.bind(on_down_change, this))
@@ -981,7 +763,8 @@ var Screen = new Class({
 				.on('mouseup', _.bind(on_up_call, this))
 				.on('mouseupoutside', _.bind(on_up_out_call, this))
 				.on('mouseover', _.bind(on_over_call, this))
-				.on('mouseout', _.bind(on_out_call, this));
+				.on('mouseout', _.bind(on_out_call, this))
+				.on('wheel', _.bind(on_wheel_call, this));
 
 			if (event_params.move) {
 
@@ -990,7 +773,7 @@ var Screen = new Class({
 
 			}
 
-			if (button_params) {
+			if (event_params.down || event_params.up || event_params.over || event_params.out) {
 
 				sprite
 					.on('mousedown', _.bind(on_down_change, this))
@@ -1003,11 +786,17 @@ var Screen = new Class({
 
 		}
 
+		Broadcast.on("Document Press Up", function(e) {
+
+			stop_press_event();
+
+		}, sprite);
+
 	},
 
 	startAnimation: function(animation_name, delay, next) {
 
-		if (!this._anims[animation_name]) this._anims[animation_name] = {_tweens: [], _delays: [], _duration: 0};
+		if (!this._anims[animation_name]) this._anims[animation_name] = {_tweens: [], _delays: []};
 
 		var animation_props = this.Animations[animation_name];
 
@@ -1104,6 +893,10 @@ var Screen = new Class({
 
 	_animateSet: function(props, target) {
 
+		if (!props) return;
+
+		if (!_.isArray(props[0])) props = [props];
+
 		_.each(props, function(set_object) {
 
 			if (set_object[0] == 'position') {
@@ -1160,17 +953,160 @@ var Screen = new Class({
 
 	},
 
+	tween: function (tween_name, targets, next, options) {
+
+		//console.log('tween', tween_name);
+
+		if (!_.isArray(targets)) targets = [targets];
+
+		if (!options) options = {};
+
+		var tween_props = this.Tweens[tween_name];
+
+		if (!tween_props) throw new Error('There are no tween with name "' + tween_name + '". Look at ' + this.Name + '.tween()');
+
+		var max_duration = 0;
+
+		for (var i = 0; targets[i]; i++) {
+
+			var target = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+
+			if (!target) throw new Error('There are no target with name "' + targets[i] + '". Look at ' + this.Name + '.tween()');
+
+			var tween_index = options.index || (target.name + ' > ' + tween_name);
+
+			if (target.tween_index) this.stopTween(target, target.tween_index, true);
+
+			var tween_object = this._anims[tween_index] = {index: tween_index, props: tween_props, _tweens: [], _delays: []};
+
+			var result = this._tween(target, tween_object, options.delay || 0);
+
+			if (max_duration < result.duration) max_duration = result.duration;
+
+		}
+
+		clearTimeout(tween_object.endTimeout);
+		tween_object.endTimeout = setTimeout(_.bind(function () {
+
+			if (!("complete" in tween_props)) tween_props.complete = tween_props.animate;
+
+			if (tween_props.complete) {
+
+				for (var i = 0; targets[i]; i++) {
+
+					var target = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+
+					this._animateSet(tween_props.complete, target);
+
+					var tween_index = options.index || (target.name + ' > ' + tween_name);
+
+					//console.log('endTimeout', tween_name);
+
+					this.stopTween(target, tween_index, false);
+
+				}
+
+			}
+
+			if (next) next.apply(this, []);
+
+		}, this), max_duration);
+
+	},
+
+	_tween: function (target, tween_object, additional_delay) {
+
+		//console.log('_tween', this.Name);
+
+		var duration = 0;
+
+		var tween_props = tween_object.props;
+
+		target.tween_index = tween_object.index;
+
+		this._animateSet(tween_props.set, target);
+
+		if (!tween_props.animate) return {duration: 0};
+
+		if (!_.isArray(tween_props.animate[0])) tween_props.animate = [tween_props.animate];
+
+		_.each(tween_props.animate, function (to_object) {
+
+			var tween_vars = {},
+				end_time = to_object[2] + (to_object[3] ? to_object[3] : 0) + (additional_delay || 0);
+
+			if (to_object[0] == 'position') {
+
+				tween_vars.x = this.calculate(to_object[1][0]);
+				tween_vars.y = this.calculate(to_object[1][1]);
+
+				this._tweenProperty(tween_object, target.position, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+
+			} else if (to_object[0] == 'scale') {
+
+				tween_vars.x = to_object[1];
+				tween_vars.y = to_object[1];
+
+				this._tweenProperty(tween_object, target.scale, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+
+			} else if (to_object[0] in target) {
+
+				tween_vars[to_object[0]] = to_object[1];
+
+				this._tweenProperty(tween_object, target, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+
+			}
+
+			if (duration < end_time) duration = end_time;
+
+		}, this);
+
+		return {duration: duration};
+
+	},
+
+	_tweenProperty: function (tween_object, target, props, time, delay, ease) {
+
+		tween_object._delays.push(setTimeout(function () {
+
+			tween_object._tweens.push(createjs.Tween.get(target, {override: true}).to(props, time, ease));
+
+		}, delay || 0));
+
+	},
+
+	stopTween: function (target, tween_index, is_stop_tweens) {
+
+		//console.log('stopTween', tween_index);
+
+		if (this._anims[tween_index]) {
+
+			clearTimeout(this._anims[tween_index].endTimeout);
+
+			if (is_stop_tweens !== false) {
+
+				var tweens = this._anims[tween_index]._tweens;
+
+				for (var i = 0, l = tweens.length; i < l; i++) createjs.Tween._tweens = _.without(createjs.Tween._tweens, tweens[i]);
+
+			}
+
+			var delays = this._anims[tween_index]._delays;
+			for (i = 0, l = delays.length; i < l; i++) clearTimeout(delays[i]);
+
+			delete this._anims[tween_index];
+
+		}
+
+		delete target.tween_index;
+
+	},
+
 	show: function() {
 
 		this.showed = true;
 
 		for (var i=0; this._containers[i]; i++) this._containers[i].visible = true;
-
-		_.each(this._dom_containers, function(dom_container) {
-
-			document.body.appendChild(dom_container.el);
-
-		});
 
 		this.resize();
 
@@ -1178,7 +1114,7 @@ var Screen = new Class({
 
 		Broadcast.on("Game Resize", this.resize, this);
 
-		Broadcast.call(this.Name + ' showed');
+		Broadcast.call(this.Name + ' showed', arguments);
 
 	},
 
@@ -1188,28 +1124,18 @@ var Screen = new Class({
 
 		for (var i=0; this._containers[i]; i++) this._containers[i].visible = false;
 
-		_.each(this._dom_containers, function(dom_container) {
-
-			if (dom_container.el.parentNode) dom_container.el.parentNode.removeChild(dom_container.el);
-
-		});
-
 		Broadcast.off("Game Update", this.update, this);
 
 		Broadcast.off("Game Resize", this.resize, this);
 
 		Broadcast.call(this.Name + ' hided');
 
+	},
+
+	bringToTop: function() {
+
+		for (var i = 0; this._containers[i]; i++) App.Stage.addChild(this._containers[i]);
+
 	}
 
 }); 
-
-Screen.PressEndEvents = [];
-
-Broadcast.on("Document Press Up", function(e) {
-
-	Broadcast.call("Global Press End", [e, Screen.PressEndEvents]);
-
-	Screen.PressEndEvents = [];
-
-}, this);
