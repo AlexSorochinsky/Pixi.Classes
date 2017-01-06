@@ -42,11 +42,13 @@ var Game = new Class({
 
 		this.Renderer = PIXI.autoDetectRenderer(300, 300, {
 			clearBeforeRender: true,
-			transparent: this.StageBackgroundColor ? false : true,
+			transparent: (this.StageBackgroundColor === false),
 			backgroundColor: this.StageBackgroundColor
 		});
 
-		this.MainStage = new PIXI.Container();
+		this.Renderer.plugins.interaction.moveWhenInside = true;
+
+		this.Stage = new PIXI.Container();
 
 		this.resources = {};
 
@@ -60,7 +62,13 @@ var Game = new Class({
 
 		if (this.prepare) this.prepare();
 
-		var loader = new PIXI.loaders.Loader();
+		var loader = this.loader = new PIXI.loaders.Loader();
+
+		loader.on("progress", function() {
+
+			Broadcast.call('Game Load Progress');
+
+		});
 
 		var fonts = [],
 			sounds = [],
@@ -179,7 +187,7 @@ var Game = new Class({
 
 		Broadcast.call("Game Update");
 
-		this.Renderer.render(this.MainStage);
+		this.Renderer.render(this.Stage);
 
 	},
 
@@ -188,6 +196,37 @@ var Game = new Class({
 		screen.App = this;
 
 		this.Screens.push(screen);
+
+	},
+
+	//Draw all containers first time, so all textures will be cached in memory and animation will be more smooth
+	cacheScreenTextures: function() {
+
+		_.each(this.Screens, function (screen) {
+
+			_.each(screen._containers, function(container) {
+
+				container._prev_visible = container.visible;
+
+				container.visible = true;
+
+			}, this);
+
+		}, this);
+
+		this.Renderer.render(this.Stage);
+
+		_.each(this.Screens, function (screen) {
+
+			_.each(screen._containers, function(container) {
+
+				container.visible = container._prev_visible;
+
+				delete container._prev_visible;
+
+			}, this);
+
+		}, this);
 
 	},
 
@@ -260,12 +299,6 @@ var Game = new Class({
 		}
 
 		return false;
-
-	},
-
-	stop: function(name, delay) {
-
-
 
 	},
 
