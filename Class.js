@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // Filename : Class.js
 //-----------------------------------------------------------------------------
 // Language : Javascript
@@ -27,5 +27,17 @@ var Class = function(props_1) {
 		if (props_1.initialize) props_1.initialize.apply(this, arguments);
 
 	};
+
+};
+
+Class.Mixin = function(target, properties) {
+
+	for (var i in properties) if (properties.hasOwnProperty(i) && i != 'initialize') {
+
+		target[i] = properties[i];
+
+	}
+
+	if (properties.initialize) properties.initialize.apply(target, [target, properties]);
 
 };
