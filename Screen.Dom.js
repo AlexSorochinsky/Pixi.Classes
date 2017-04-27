@@ -10,9 +10,9 @@
 
 Class.Mixin(Screen, {
 
-	initialize: function(target, properties) {
+	initialize: function() {
 
-		Broadcast.on(target.Name + ' build', function() {
+		Broadcast.on(this.Name + ' build', function() {
 
 			//'this' here == instance of Screen class
 
@@ -22,9 +22,9 @@ Class.Mixin(Screen, {
 
 			}, this);
 
-		}, properties);
+		}, this, {index: this.Name+'-Dom'});
 
-		Broadcast.on(target.Name + ' resize', function() {
+		Broadcast.on(this.Name + ' resize', function() {
 
 			//'this' here == instance of Screen class
 
@@ -58,9 +58,9 @@ Class.Mixin(Screen, {
 
 			}, this);
 
-		}, properties);
+		}, this, {index: this.Name+'-Dom'});
 
-		Broadcast.on(target.Name + ' showed', function() {
+		Broadcast.on(this.Name + ' showed', function() {
 
 			_.each(this._dom_containers, function(dom_container) {
 
@@ -68,9 +68,9 @@ Class.Mixin(Screen, {
 
 			});
 
-		}, properties);
+		}, this, {index: this.Name+'-Dom'});
 
-		Broadcast.on(target.Name + ' hided', function() {
+		Broadcast.on(this.Name + ' hided', function() {
 
 			_.each(this._dom_containers, function(dom_container) {
 
@@ -78,7 +78,7 @@ Class.Mixin(Screen, {
 
 			});
 
-		}, properties);
+		}, this, {index: this.Name+'-Dom'});
 
 	},
 
@@ -219,7 +219,7 @@ Class.Mixin(Screen, {
 
 				var clickpos = Screen.prototype.getMousePositionDistance(e);
 
-				if (Math.abs(parseFloat(this.getAttribute('clickpos')) - clickpos) < 20) Broadcast.fireEvent(name + ' ' + code + ' click', [e, el]);
+				if (Math.abs(parseFloat(this.getAttribute('clickpos')) - clickpos) < 20) Broadcast.call(name + ' ' + code + ' click', [e, el]);
 
 			}, false);
 

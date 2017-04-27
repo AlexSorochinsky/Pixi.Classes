@@ -16,11 +16,9 @@ var Screen = new Class({
 
 		this._containers = [];
 
+		this._childs = [];
+
 		this._emitters = [];
-
-		this._anims = {};
-
-		this._tweens = {};
 
 		this.state = 'idle';
 
@@ -40,10 +38,14 @@ var Screen = new Class({
 
 		if (!this.Tweens) this.Tweens = {};
 
+		this.AssetsHash = _.indexBy(this.Assets, 'name');
+
 		Broadcast.call(this.Name + ' before build');
 
 		_.each(this.Containers, function(container_params) {
 
+			if (!container_params.position) container_params.position = ['width/2', 'height/2'];
+			if (!container_params.scale) container_params.scale = 'scale';
 			if (!container_params.type) container_params.type = 'container';
 
 			if (container_params.type == 'container') {
@@ -74,6 +76,8 @@ var Screen = new Class({
 
 			var child = this.buildChild(container, child_params);
 
+			this._childs.push(child);
+
 			if (child_params.childs) this.buildChilds(child_params.childs, child);
 
 		}, this);
@@ -84,49 +88,19 @@ var Screen = new Class({
 
 		var child;
 
+		this.processOrientationProperties(child_params);
+
 		if (child_params.type == 'sprite') {
 
-			if (child_params.image && App.resources[child_params.image]) child = new PIXI.Sprite(App.resources[child_params.image].texture);
-
-			else if (child_params.frame || child_params.image) {
-
-				child = PIXI.Sprite.fromFrame(child_params.frame || child_params.image);
-
-			}
+			child = new PIXI.Sprite(this.getTexture(child_params.frame || child_params.image));
 
 			container.addChild(child);
 
 		} else if (child_params.type == 'tiling-sprite') {
 
-			if (child_params.image) child = new PIXI.TilingSprite(App.resources[child_params.image].texture, child_params.width, child_params.height);
-
-			else if (child_params.frame) child = PIXI.TilingSprite.fromFrame(child_params.frame, child_params.width, child_params.height);
+			child = new PIXI.TilingSprite(this.getTexture(child_params.frame || child_params.image), child_params.width, child_params.height);
 
 			container.addChild(child);
-
-		} else if (child_params.type == 'emitter') {
-
-			child = new PIXI.particles.Emitter(container, [child_params.image ? PIXI.Texture.fromImage(child_params.image) : PIXI.Texture.fromFrame(child_paramse)], {
-				alpha: _.extend({start: 0.8, end: 0.1}, child_params.options.alpha),
-				scale: _.extend({start: 1, end: 0.3}, child_params.options.scale),
-				color: _.extend({start: "ffffff", end: "ffffff"}, child_params.options.color),
-				speed: _.extend({start: 200, end: 100}, child_params.options.speed),
-				acceleration: _.extend({x: 100, y: 100}, child_params.options.acceleration),
-				startRotation: _.extend({min: 0, max: 360}, child_params.options.startRotation),
-				rotationSpeed: _.extend({min: 0, max: 0}, child_params.options.rotationSpeed),
-				lifetime: _.extend({min: 0.5, max: 0.5}, child_params.options.lifetime),
-				frequency: child_params.options.frequency || 0.008,
-				emitterLifetime: child_params.options.emitterLifetime || 0.31,
-				maxParticles: child_params.options.maxParticles || 1000,
-				pos: {x: 0, y: 0},
-				addAtBack: false,
-				spawnType: "circle",
-				spawnCircle: {x: 0, y: 0, r: 10}
-			});
-
-			child.emit = false;
-
-			this._emitters.push(child);
 
 		} else if (child_params.type == 'text') {
 
@@ -140,9 +114,9 @@ var Screen = new Class({
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'container') {
+		}  else if (child_params.type == 'multistyle-text') {
 
-			child = new PIXI.Container();
+			child = new MultiStyleText(child_params.text, child_params.styles);
 
 			container.addChild(child);
 
@@ -150,33 +124,43 @@ var Screen = new Class({
 
 			child = new PIXI.Graphics();
 
-			if (!_.isArray(child_params.draw[0])) child_params.draw = [child_params.draw];
-
-			_.each(child_params.draw, function(shape) {
-
-				if (shape[0] == 'rect') {
-
-					child.beginFill(shape[5]);
-
-					child.drawRect(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]), this.calculate(shape[4]));
-
-				}
-
-			}, this);
+			//Graphics will be drawn on resize event
 
 			container.addChild(child);
 
 		} else if (child_params.type == 'movie-clip') {
 
+			if (child_params.frameTemplate) {
+
+				child_params.frames = [];
+
+				for (var i=child_params.frameStart; i<=child_params.frameEnd; i++) child_params.frames.push(child_params.frameTemplate.replace('??', i<10?'0'+i:i));
+
+			}
+
 			var frames = _.map(child_params.frames, function(image) {
 
-				return App.resources[image] ? App.resources[image].texture : PIXI.Texture.fromFrame(image);
+				return this.getTexture(image);
 
-			});
+			}, this);
 
 			child = new PIXI.extras.MovieClip(frames);
 
 			child.animationSpeed = child_params.speed || 1;
+
+			child.loop = child_params.loop || false;
+
+			container.addChild(child);
+
+		} else if (child_params.type == 'container') {
+
+			child = new PIXI.Container();
+
+			container.addChild(child);
+
+		} else {
+
+			child = new PIXI.Container();
 
 			container.addChild(child);
 
@@ -262,9 +246,22 @@ var Screen = new Class({
 
 		}
 
+		if (child_params.skew) {
+
+			child.skew.set(this.calculate(child_params.skew[0]), this.calculate(child_params.skew[1]));
+
+		}
+
+		if ('alpha' in child_params) child.alpha = this.calculate(child_params.alpha);
+		if ('rotation' in child_params) child.rotation = this.calculate(child_params.rotation);
+
 		if (child.anchor) {
 			if (child_params.anchor) child.anchor.set(child_params.anchor[0], child_params.anchor[1]);
 			else child.anchor.set(0.5, 0.5);
+		}
+
+		if (child.pivot) {
+			if (child_params.pivot) child.pivot.set(child_params.pivot[0], child_params.pivot[1]);
 		}
 
 		if (child_params.tint) child.tint = child_params.tint;
@@ -281,9 +278,31 @@ var Screen = new Class({
 
 		child._child_params = child_params;
 
+		Broadcast.call(this.Name + ' build child', [child, child_params]);
+
 		if (is_reposition) this.resizeChild(child);
 
 		return child;
+
+	},
+
+	getTexture: function(name) {
+
+		if (App.resources[name]) return App.resources[name].texture;
+
+		else if (PIXI.utils.TextureCache[name]) return PIXI.utils.TextureCache[name];
+
+		else return App.emptyTexture;
+
+	},
+
+	getTextures: function(names) {
+
+		var textures = [];
+
+		for (var i=0; names[i]; i++) textures.push(this.getTexture(names[i]));
+
+		return textures;
 
 	},
 
@@ -292,12 +311,6 @@ var Screen = new Class({
 		this.updateTimeOffset = App.time - this.updateTime;
 
 		this.updateTime = App.time;
-
-		_.each(this._emitters, function(emitter) {
-
-			emitter.update(this.updateTimeOffset * 0.001);
-
-		}, this);
 
 		Broadcast.call(this.Name + ' update');
 
@@ -345,60 +358,35 @@ var Screen = new Class({
 
 		var child_params = child._child_params;
 
+		this.processOrientationProperties(child_params);
+
+		if (!('scaleStrategy' in child_params) && ('scale' in child_params)) {
+
+			if (!_.isArray(child_params.scale)) child_params.scale = [child_params.scale, child_params.scale];
+
+			child.scale.set(this.calculate(child_params.scale[0]), this.calculate(child_params.scale[1]));
+
+		} else if ('scaleStrategy' in child_params) {
+
+			var scale = null;
+
+			if (child_params.scaleStrategy) scale = this.getScaleByStrategy(child_params.scaleStrategy);
+
+			child.scale.set(scale || 1);
+
+		}
+
 		if ('position' in child_params) {
 
 			if (!_.isArray(child_params.position)) child_params.position = [child_params.position, child_params.position];
 
-			if (child.type == 'emitter') child.spawnPos = {x: this.calculate(child_params.position[0]), y: this.calculate(child_params.position[1])};
+			child.position.set(this.calculate(child_params.position[0]), this.calculate(child_params.position[1]));
 
-			else child.position.set(this.calculate(child_params.position[0]), this.calculate(child_params.position[1]));
+		} /*else {
 
-		} else {
+			child.position.set(0, 0);
 
-			if (child.type == 'emitter') child.spawnPos = {x: 0, y: 0};
-
-			else if (child.type == 'container') child.position.set(App.CenterX, App.CenterY);
-
-			else child.position.set(0, 0);
-
-		}
-
-		if ('scale' in child_params) {
-
-			if (!_.isArray(child_params.scale)) child_params.scale = [child_params.scale, child_params.scale];
-
-			if (child.type == 'emitter') {
-
-				child.startScale = this.calculate(child_params.scale[0]);
-				child.endScale = this.calculate(child_params.scale[1])
-
-			}
-
-			else child.scale.set(this.calculate(child_params.scale[0]), this.calculate(child_params.scale[1]));
-
-		} else {
-
-			if (child.type == 'emitter') child.startScale = child.endScale = 1;
-
-			else if (child.type == 'container') {
-
-				var scale = App.Scale;
-
-				if (child_params.scaleStrategy) scale = this.getScaleByStrategy(child_params.scaleStrategy);
-
-				child.scale.set(scale);
-
-			}
-
-			else child.scale.set(1);
-
-		}
-
-		if ('alpha' in child_params) child.alpha = this.calculate(child_params.alpha);
-		if ('rotation' in child_params) child.rotation = this.calculate(child_params.rotation);
-
-		if ('width' in child_params) child.width = this.calculate(child_params.width);
-		if ('height' in child_params) child.height = this.calculate(child_params.height);
+		}*/
 
 		if (child_params.mask) {
 
@@ -406,11 +394,11 @@ var Screen = new Class({
 
 				if (child_params.mask[5] !== true) {
 
-				child.mask.clear();
+					child.mask.clear();
 
-				child.mask.beginFill(0x000000);
+					child.mask.beginFill(0x000000);
 
-				child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
+					child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
 
 				}
 
@@ -418,7 +406,29 @@ var Screen = new Class({
 
 				this.resizeChild(child.mask);
 
+			}
+
 		}
+
+		if (child_params.draw) {
+
+			child.clear();
+
+			if (!_.isArray(child_params.draw[0])) child_params.draw = [child_params.draw];
+
+			_.each(child_params.draw, function(shape) {
+
+				if (shape[0] == 'rect') {
+
+					child.beginFill(shape[5]);
+
+					child.fillAlpha = shape[6] || 1;
+
+					child.drawRect(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]), this.calculate(shape[4]));
+
+				}
+
+			}, this);
 
 		}
 
@@ -426,11 +436,24 @@ var Screen = new Class({
 
 	},
 
+	processOrientationProperties: function(object) {
+
+		_.each(object, function(value, key) {
+
+			if (App.IsLandscape && key.indexOf('Landscape') > 0) object[key.replace('Landscape', '')] = object[key];
+
+			else if (App.IsPortrait && key.indexOf('Portrait') > 0) object[key.replace('Portrait', '')] = object[key];
+
+		});
+
+	},
+
 	getScaleByStrategy: function(scale_strategy) {
 
 		var scale = 1,
 			width = App.Width,
-			height = App.Height;
+			height = App.Height,
+			max_scale = 1;
 
 		if (!_.isArray(scale_strategy)) scale_strategy = [scale_strategy];
 
@@ -441,7 +464,10 @@ var Screen = new Class({
 
 			scale = Math.min(App.Width / width, App.Height / height);
 
-			if (scale > 1 && scale_strategy[3] !== false) scale = 1;
+			if (scale_strategy[3] === false) max_scale = 100000;
+			else if (scale_strategy[3] == 'pixel-ratio') max_scale = App.PixelRatio;
+
+			if (scale > max_scale) scale = max_scale;
 
 		} else if (scale_strategy[0] == 'cover-screen') {
 
@@ -450,7 +476,10 @@ var Screen = new Class({
 
 			scale = Math.max(App.Width / width, App.Height / height);
 
-			if (scale > 1 && scale_strategy[3] !== false) scale = 1;
+			if (scale_strategy[3] === false) max_scale = 100000;
+			else if (scale_strategy[3] == 'pixel-ratio') max_scale = App.PixelRatio;
+
+			if (scale > max_scale) scale = max_scale;
 
 		}
 
@@ -611,6 +640,15 @@ var Screen = new Class({
 
 			}
 
+			var down_sprite = event_params.downSprite;
+
+			if (down_sprite) {
+
+				sprite.alpha = 0;
+				this[down_sprite].alpha = 1;
+
+			}
+
 		};
 
 		var on_up_change = function() {
@@ -645,37 +683,49 @@ var Screen = new Class({
 
 			}
 
+			var down_sprite = event_params.downSprite;
+
+			if (down_sprite) {
+
+				sprite.alpha = 1;
+				this[down_sprite].alpha = 0;
+
+			}
+
 		};
 
 		var on_over_change = function() {
 
 			var over = event_params.over;
 
-			if (over) {
+			if (_.isFunction(over)) over = over.apply(this, []);
 
-				if (_.isFunction(over)) over = over.apply(this, []);
+			if (_.isArray(over) || _.isString(over)) {
 
-				if (over) {
+				var actions = _.isArray(over) ? over : [over];
 
-					var actions = _.isArray(over) ? over : [over];
+				if (!_.isArray(actions[0])) actions = [actions];
 
-					if (!_.isArray(actions[0])) actions = [actions];
+				for (var i = 0; actions[i]; i++) {
 
-					for (var i = 0; actions[i]; i++) {
+					var action = actions[i];
 
-						var action = actions[i];
+					var tween = this.Tweens[action[0]];
 
-						var tween = this.Tweens[action[0]];
+					if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<over> definition.');
 
-						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<over> definition.');
+					if (!action[1]) action[1] = sprite;
 
-						if (!action[1]) action[1] = sprite;
-
-						this.tween(action[0], action[1]);
-
-					}
+					this.tween(action[0], action[1]);
 
 				}
+
+			} else if (_.isObject(over)) {
+
+				sprite._child_params._over_original_position = sprite._child_params.position;
+				sprite._child_params._over_original_scale = sprite._child_params.scale;
+
+				this.tween(over, sprite);
 
 			}
 
@@ -685,31 +735,40 @@ var Screen = new Class({
 
 			var out = event_params.out;
 
-			if (out) {
+			if (_.isFunction(out)) out = out.apply(this, []);
 
-				if (_.isFunction(out)) out = out.apply(this, []);
+			else if (_.isArray(out) || _.isString(out)) {
 
-				if (out) {
+				var actions = _.isArray(out) ? out : [out];
 
-					var actions = _.isArray(out) ? out : [out];
+				if (!_.isArray(actions[0])) actions = [actions];
 
-					if (!_.isArray(actions[0])) actions = [actions];
+				for (var i = 0; actions[i]; i++) {
 
-					for (var i = 0; actions[i]; i++) {
+					var action = actions[i];
 
-						var action = actions[i];
+					var tween = this.Tweens[action[0]];
 
-						var tween = this.Tweens[action[0]];
+					if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<out> definition.');
 
-						if (!tween) throw new Error('There are no tween with name "' + action[0] + '". Look at "' + this.Name + '".Tweens definition or "' + this.Name + '".Containers.<child>.<event>.<out> definition.');
+					if (!action[1]) action[1] = sprite;
 
-						if (!action[1]) action[1] = sprite;
-
-						this.tween(action[0], action[1]);
-
-					}
+					this.tween(action[0], action[1]);
 
 				}
+
+			}
+
+			var over = event_params.over;
+
+			if (_.isObject(over) && !_.isArray(over)) {
+
+				var tween_params = [];
+
+				if (sprite._child_params._over_original_position) tween_params.push(['position', sprite._child_params._over_original_position, over.time || 200, over.delay || 0, over.ease || Ease.linear]);
+				if (sprite._child_params._over_original_scale) tween_params.push(['scale', sprite._child_params._over_original_scale, over.time || 200, over.delay || 0, over.ease || Ease.linear]);
+
+				this.tween(tween_params, sprite);
 
 			}
 
@@ -733,7 +792,32 @@ var Screen = new Class({
 
 		};
 
-		if (App.IsTouchDevice) {
+		if (window.PointerEvent) {
+
+			sprite
+				.on('pointerdown', _.bind(on_down_call, this))
+				.on('pointerup', _.bind(on_up_call, this))
+				.on('pointerover', _.bind(on_over_call, this))
+				.on('pointerout', _.bind(on_out_call, this));
+
+			if (event_params.move) {
+
+				sprite
+					.on('pointermove', _.bind(on_move_call, this))
+
+			}
+
+			if (event_params.down || event_params.up || event_params.over || event_params.out) {
+
+				sprite
+					.on('pointerdown', _.bind(on_down_change, this))
+					.on('pointerup', _.bind(on_up_change, this))
+					.on('pointerover', _.bind(on_over_change, this))
+					.on('pointerout', _.bind(on_out_change, this));
+
+			}
+
+		} else if (App.IsTouchDevice) {
 
 			sprite
 				.on('touchstart', _.bind(on_down_call, this))
@@ -747,7 +831,7 @@ var Screen = new Class({
 
 			}
 
-			if (event_params.down || event_params.up) {
+			if (event_params.down || event_params.up || event_params.over || event_params.out) {
 
 				sprite
 					.on('touchstart', _.bind(on_down_change, this))
@@ -794,118 +878,121 @@ var Screen = new Class({
 
 	},
 
-	startAnimation: function(animation_name, delay, next) {
+	tween: function (tween_name, targets, next, options) {
 
-		if (!this._anims[animation_name]) this._anims[animation_name] = {_tweens: [], _delays: []};
+		//console.log('tween', tween_name);
 
-		var animation_props = this.Animations[animation_name];
+		if (!_.isArray(targets)) targets = [targets];
 
-		if (_.isArray(animation_props)) {
+		if (!options) options = {};
 
-			var duration = 0;
+		var tween_props = this.Tweens[tween_name];
 
-			_.each(animation_props, function(animation_line_params) {
+		if (!tween_props) {
 
-				if (!_.isArray(animation_line_params[0])) animation_line_params[0] = [animation_line_params[0]];
+			if (_.isArray(tween_name)) tween_name = {to: tween_name};
 
-				_.each(animation_line_params[0], function(target_name) {
+			if (_.isObject(tween_name)) {
 
-					var result = this._animate(animation_name, this[target_name], this.Animations[animation_line_params[1]], animation_line_params[2] + (delay || 0));
+				tween_props = tween_name;
 
-					if (duration < result.duration) duration = result.duration;
+				tween_name = JSON.stringify(tween_name);
 
-				}, this);
-
-			}, this);
-
-			clearTimeout(this._anims[animation_name].endTimeout);
-			this._anims[animation_name].endTimeout = setTimeout(_.bind(function() {
-
-				this.stopAnimation(animation_name, false);
-
-				if (next) next.apply(this, []);
-
-			}, this), duration);
-
-		} else {
-
-			var result = this._animate(animation_name, this[animation_props.target], animation_props,  delay || 0);
-
-			clearTimeout(this._anims[animation_name].endTimeout);
-			this._anims[animation_name].endTimeout = setTimeout(_.bind(function() {
-
-				this.stopAnimation(animation_name, false);
-
-				if (!("complete" in animation_props)) animation_props.complete = animation_props.animate;
-
-				if (animation_props.complete) this._animateSet(animation_props.complete, this[animation_props.target]);
-
-				if (animation_props.next) this.startAnimation(animation_props.next, 0, next);
-
-				else if (next) next.apply(this, []);
-
-			}, this), result.duration);
+			}
 
 		}
 
+		if (!tween_props) throw new Error('There are no tween with name "' + tween_name + '". Look at ' + this.Name + ' > .tween()');
+
+		var tween_object = options.tweenObject || {};
+
+		tween_object.targets = targets;
+		tween_object.props = tween_props;
+		tween_object.next = next;
+		tween_object.options = options;
+		tween_object.tweens = [];
+
+		if (!tween_object.index) tween_object.index = _.uniqueId();
+
+		if (!tween_object.startingProps) tween_object.startingProps = tween_props;
+
+		for (var i = 0; targets[i]; i++) {
+
+			var target = targets[i] = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+
+			if (!target) throw new Error('There are no target with name "' + targets[i] + '". Look at ' + this.Name + ' > .tween()');
+
+			this._tween(target, tween_object, options.delay || 0, {
+				override: ('override' in options) ? options.override : true,
+				loop: options.loop || false,
+				onChange: options.onChange
+			});
+
+		}
+
+		return tween_object;
+
 	},
 
-	_animate: function(animation_name, target, animation_props, additional_delay) {
+	_tween: function (target, tween_object, additional_delay, options) {
 
-		var duration = 0;
+		var tween_props = tween_object.props;
 
-		this._animateSet(animation_props.set, target);
+		this._tweenSet(tween_props.set, target);
 
-		_.each(animation_props.animate, function(to_object) {
+		if (!tween_props.to) return;
 
-			var tween_vars = {},
-				end_time = to_object[2] + (to_object[3] ? to_object[3] : 0) + (additional_delay || 0);
+		if (!_.isArray(tween_props.to[0])) tween_props.to = [tween_props.to];
 
-			if (to_object[0] == 'position') {
+		_.each(tween_props.to, function (to_object) {
 
-				tween_vars.x = this.calculate(to_object[1][0]);
-				tween_vars.y = this.calculate(to_object[1][1]);
+			var tween_vars = {};
 
-				this._animateProperty(animation_name, target.position, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+			if (_.contains(['position', 'scale', 'anchor', 'skew'], to_object[0])) {
 
-			} else if (to_object[0] == 'scale') {
+				if (!target[to_object[0]]) throw new Error('The are no property "'+to_object[0]+'" in tween target.');
 
-				tween_vars.x = to_object[1];
-				tween_vars.y = to_object[1];
+				if (!_.isArray(to_object[1])) to_object[1] = [to_object[1], to_object[1]];
 
-				this._animateProperty(animation_name, target.scale, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+				if (to_object[1][0] || to_object[1][0] === 0) tween_vars.x = this.calculate(to_object[1][0]);
+				if (to_object[1][1] || to_object[1][1] === 0) tween_vars.y = this.calculate(to_object[1][1]);
+
+				this._tweenProperty(tween_object, target[to_object[0]], tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear, options);
+
+				if (!options.dontChangeChildParams) target._child_params[to_object[0]] = to_object[1];
 
 			} else if (to_object[0] in target) {
 
 				tween_vars[to_object[0]] = to_object[1];
 
-				this._animateProperty(animation_name, target, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+				this._tweenProperty(tween_object, target, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear, options);
 
 			}
 
-			if (duration < end_time) duration = end_time;
-
 		}, this);
-
-		return {duration: duration};
 
 	},
 
-	_animateSet: function(props, target) {
+	_tweenSet: function(props, target) {
 
 		if (!props) return;
 
 		if (!_.isArray(props[0])) props = [props];
 
+		var x, y;
+
 		_.each(props, function(set_object) {
 
-			if (set_object[0] == 'position') {
+			if (_.contains(['position', 'scale', 'anchor', 'skew'], set_object[0])) {
 
-				target.position.set(this.calculate(set_object[1][0]), this.calculate(set_object[1][1]));
+				if (!target[set_object[0]]) throw new Error('The are no property "'+set_object[0]+'" in tween target.');
 
-			} else if (set_object[0] == 'scale') {
+				if (!_.isArray(set_object[1])) set_object[1] = [set_object[1], set_object[1]];
 
-				target.scale.set(this.calculate(set_object[1]), this.calculate(set_object[1]));
+				x = (set_object[1][0] || set_object[1][0] === 0) ? this.calculate(set_object[1][0]) : target[set_object[0]].x;
+				y = (set_object[1][1] || set_object[1][1] === 0) ? this.calculate(set_object[1][1]) : target[set_object[0]].y;
+
+				target[set_object[0]].set(x, y);
 
 			} else if (set_object[0] in target) {
 
@@ -917,188 +1004,69 @@ var Screen = new Class({
 
 	},
 
-	_animateProperty: function(animation_name, object, props, time, delay, ease) {
-
-		if (this._anims[animation_name]) {
-
-			var _this = this;
-
-			this._anims[animation_name]._delays.push(setTimeout(function() {
-
-				_this._anims[animation_name]._tweens.push(createjs.Tween.get(object, {override:true}).to(props, time, ease));
-
-			}, delay || 0));
-
-		}
-
-	},
-
-	stopAnimation: function(animation_name, is_stop_tweens) {
-
-		if (this._anims[animation_name]) {
-
-			clearTimeout(this._anims[animation_name].endTimeout);
-
-			if (is_stop_tweens !== false) {
-
-			var tweens = this._anims[animation_name]._tweens;
-				for (var i=0, l=tweens.length; i<l; i++) createjs.Tween._tweens = _.without(createjs.Tween._tweens, tweens[i]);
-
-			}
-
-			var delays = this._anims[animation_name]._delays;
-			for (i=0, l=delays.length; i<l; i++) clearTimeout(delays[i]);
-
-		}
-
-	},
-
-	tween: function (tween_name, targets, next, options) {
-
-		//console.log('tween', tween_name);
-
-		if (!_.isArray(targets)) targets = [targets];
+	_tweenProperty: function (tween_object, target, props, time, delay, ease, options) {
 
 		if (!options) options = {};
 
-		var tween_props = this.Tweens[tween_name];
+		if (!('override' in options)) options.override = true;
 
-		if (!tween_props) throw new Error('There are no tween with name "' + tween_name + '". Look at ' + this.Name + '.tween()');
+		var tween = createjs.Tween.get(target, options).wait(delay || 0).to(props, time, ease).call(function() {
 
-		var max_duration = 0;
+			tween._pc_completed = true;
 
-		for (var i = 0; targets[i]; i++) {
+			this._tweenEnd(tween_object);
 
-			var target = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+		}, [], this);
 
-			if (!target) throw new Error('There are no target with name "' + targets[i] + '". Look at ' + this.Name + '.tween()');
+		tween_object.tweens.push(tween);
 
-			var tween_index = options.index || (target.name + ' > ' + tween_name);
+	},
 
-			if (target.tween_index) this.stopTween(target, target.tween_index, true);
+	_tweenEnd: function(tween_object) {
 
-			var tween_object = this._anims[tween_index] = {index: tween_index, props: tween_props, _tweens: [], _delays: []};
+		var is_completed = true;
 
-			var result = this._tween(target, tween_object, options.delay || 0);
+		for (var i=0; tween_object.tweens[i]; i++) {
 
-			if (max_duration < result.duration) max_duration = result.duration;
+			if (!tween_object.tweens[i]._pc_completed) is_completed = false;
 
 		}
 
-		clearTimeout(tween_object.endTimeout);
-		tween_object.endTimeout = setTimeout(_.bind(function () {
+		if (is_completed) {
 
-			if (!("complete" in tween_props)) tween_props.complete = tween_props.animate;
+			if (tween_object.props.next) {
 
-			if (tween_props.complete) {
+				this.tween(tween_object.props.next, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
 
-				for (var i = 0; targets[i]; i++) {
+			} else if (tween_object.startingProps.loop) {
 
-					var target = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+				this.tween(tween_object.startingProps, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
 
-					this._animateSet(tween_props.complete, target);
+			} else {
 
-					var tween_index = options.index || (target.name + ' > ' + tween_name);
-
-					//console.log('endTimeout', tween_name);
-
-					this.stopTween(target, tween_index, false);
+				if (tween_object.next) tween_object.next.apply(this, [tween_object]);
 
 				}
 
 			}
 
-			if (next) next.apply(this, []);
-
-		}, this), max_duration);
-
 	},
 
-	_tween: function (target, tween_object, additional_delay) {
+	stopTween: function (tween_object) {
 
-		//console.log('_tween', this.Name);
+		if (tween_object) {
 
-		var duration = 0;
+			var tweens = tween_object.tweens;
 
-		var tween_props = tween_object.props;
+			for (var i = 0, l = tweens.length; i < l; i++) {
 
-		target.tween_index = tween_object.index;
+				createjs.Tween._tweens = _.without(createjs.Tween._tweens, tweens[i]);
 
-		this._animateSet(tween_props.set, target);
-
-		if (!tween_props.animate) return {duration: 0};
-
-		if (!_.isArray(tween_props.animate[0])) tween_props.animate = [tween_props.animate];
-
-		_.each(tween_props.animate, function (to_object) {
-
-			var tween_vars = {},
-				end_time = to_object[2] + (to_object[3] ? to_object[3] : 0) + (additional_delay || 0);
-
-			if (to_object[0] == 'position') {
-
-				tween_vars.x = this.calculate(to_object[1][0]);
-				tween_vars.y = this.calculate(to_object[1][1]);
-
-				this._tweenProperty(tween_object, target.position, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
-
-			} else if (to_object[0] == 'scale') {
-
-				tween_vars.x = to_object[1];
-				tween_vars.y = to_object[1];
-
-				this._tweenProperty(tween_object, target.scale, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
-
-			} else if (to_object[0] in target) {
-
-				tween_vars[to_object[0]] = to_object[1];
-
-				this._tweenProperty(tween_object, target, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear);
+				createjs.Tween.tweens = _.without(createjs.Tween.tweens, tweens[i]);
 
 			}
-
-			if (duration < end_time) duration = end_time;
-
-		}, this);
-
-		return {duration: duration};
-
-	},
-
-	_tweenProperty: function (tween_object, target, props, time, delay, ease) {
-
-		tween_object._delays.push(setTimeout(function () {
-
-			tween_object._tweens.push(createjs.Tween.get(target, {override: true}).to(props, time, ease));
-
-		}, delay || 0));
-
-	},
-
-	stopTween: function (target, tween_index, is_stop_tweens) {
-
-		//console.log('stopTween', tween_index);
-
-		if (this._anims[tween_index]) {
-
-			clearTimeout(this._anims[tween_index].endTimeout);
-
-			if (is_stop_tweens !== false) {
-
-				var tweens = this._anims[tween_index]._tweens;
-
-				for (var i = 0, l = tweens.length; i < l; i++) createjs.Tween._tweens = _.without(createjs.Tween._tweens, tweens[i]);
-
-			}
-
-			var delays = this._anims[tween_index]._delays;
-			for (i = 0, l = delays.length; i < l; i++) clearTimeout(delays[i]);
-
-			delete this._anims[tween_index];
 
 		}
-
-		delete target.tween_index;
 
 	},
 
@@ -1115,6 +1083,8 @@ var Screen = new Class({
 		Broadcast.on("Game Resize", this.resize, this);
 
 		Broadcast.call(this.Name + ' showed', arguments);
+
+		this.checkAssets();
 
 	},
 
@@ -1135,6 +1105,38 @@ var Screen = new Class({
 	bringToTop: function() {
 
 		for (var i = 0; this._containers[i]; i++) App.Stage.addChild(this._containers[i]);
+
+	},
+
+	checkAssets: function() {
+
+		if (this.assetsLoadOnShowChecked) return;
+
+		var assets_for_loading = [];
+
+		_.each(this.Assets, function(asset) {
+
+			if (asset.loadStrategy == 'first show') assets_for_loading.push(asset.name);
+
+		}, this);
+
+		this.assetsLoadOnShowChecked = true;
+
+		if (assets_for_loading.length > 0) App.loadAssets(assets_for_loading, _.bind(function() {
+
+			_.each(this._childs, function(child) {
+
+				var child_params = child._child_params;
+
+				if (child_params.type == 'sprite') {
+
+					if (child.texture == App.emptyTexture) child.texture = this.getTexture(child_params.frame || child_params.image);
+
+				}
+
+			}, this);
+
+		}, this), {strategy: 'first show'});
 
 	}
 

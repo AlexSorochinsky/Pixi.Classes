@@ -34,6 +34,8 @@ var Game = new Class({
 
 	srcURL: '',
 
+	Assets: {},
+
 	Screens: [], //Array of game screen objects
 
 	start: function () {
@@ -50,29 +52,51 @@ var Game = new Class({
 
 		this.Stage = new PIXI.Container();
 
+		this.Stage.interactive = true;
+		this.Stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
+
 		this.resources = {};
 
-		this.preload();
+		if (this.prepare) this.prepare();
+
+		this.loadAssets(null, function() {
+
+			Broadcast.call("Assets Loaded");
+
+			App.create();
+
+		}, {strategy: 'preload'});
+
+		this.createEmptyTexture();
 
 		this.addRendererEvents();
 
 	},
 
-	preload: function () {
+	loadAssets: function (assets, next, options) {
 
-		if (this.prepare) this.prepare();
+		if (!options) options = {};
 
-		var loader = this.loader = new PIXI.loaders.Loader();
+		var loader = {
+			pixiReady: false,
+			domImagesReady: false,
+			webFontsReady: false,
+			soundsReady: false,
+			textsReady: false
+		};
 
-		loader.on("progress", function() {
+		var pixi_loader = loader.pixiLoader = new PIXI.loaders.Loader();
 
-			Broadcast.call('Game Load Progress');
+		pixi_loader.on("progress", function() {
+
+			Broadcast.call('Game Load Progress', [loader, assets]);
 
 		});
 
 		var fonts = [],
 			sounds = [],
-			images = [];
+			images = [],
+			texts = [];
 
 		_.each(this.Screens, function (screen) {
 
@@ -80,17 +104,50 @@ var Game = new Class({
 
 				_.each(screen.Assets, function (asset) {
 
-					if (asset.type == 'image') loader.add(asset.name, App.srcURL + asset.url + '?v=' + this.Version);
+					var name = asset.name;
 
-					else if (asset.type == 'atlas') loader.add(asset.name, App.srcURL + asset.url + '?v=' + this.Version);
+					if (assets && !_.contains(assets, name)) return;
 
-					else if (asset.type == 'bitmap-font') loader.add(asset.name, App.srcURL + asset.url + '?v=' + this.Version);
+					if (App.Assets[name] && App.Assets[name].state != 'prepared') {
 
-					else if (asset.type == 'web-font') fonts.push([asset.name, App.srcURL + asset.url + '?v=' + this.Version]);
+						if (App.Assets[name].state == 'loaded') console.warn('Asset already loaded. Check "'+name+'" asset for multiple load.');
 
-					else if (asset.type == 'sound') sounds.push([asset.name, App.srcURL + asset.url + '?v=' + this.Version]);
+						else if (App.Assets[name].state == 'loading') console.warn('Asset already loading. Check "'+name+'" asset for multiple load.');
 
-					else if (asset.type == 'dom-image') images.push(App.srcURL + asset.url);
+						else throw new Error('Asset names in all screens must be unique. Check "'+name+'" asset definition in "'+screen.Name+'" screen.');
+
+					} else if (!App.Assets[name]) {
+
+						asset.state = 'prepared';
+						App.Assets[name] = asset;
+
+					}
+
+					if (!asset.loadStrategy) asset.loadStrategy = 'preload';
+
+					if (options.strategy == 'preload' && asset.loadStrategy != 'preload') return;
+
+					var url = asset.url;
+
+					if (_.isFunction(url)) url = url.call(App);
+
+					if (url.indexOf('http') !== 0) url = App.srcURL + url + '?v=' + this.Version;
+
+					if (asset.type == 'image') pixi_loader.add(asset.name, url);
+
+					else if (asset.type == 'atlas') pixi_loader.add(asset.name, url);
+
+					else if (asset.type == 'bitmap-font') pixi_loader.add(asset.name, url);
+
+					else if (asset.type == 'web-font') fonts.push([asset.name, url]);
+
+					else if (asset.type == 'sound') sounds.push([asset.name, url]);
+
+					else if (asset.type == 'dom-image') images.push([asset.name, url]);
+
+					else if (asset.type == 'text') texts.push([asset.name, url]);
+
+					asset.state = 'loading';
 
 				}, this);
 
@@ -98,36 +155,45 @@ var Game = new Class({
 
 		}, this);
 
-		_.each(images, function(url) {
+		if (_.size(pixi_loader.resources) > 0) {
 
-			var img = new Image();
-			img.src = url;
+			pixi_loader.load(_.bind(function (pixi_loader, resources) {
 
-		});
+				App.resources = resources;
 
-		var load_images = function () {
+				_.each(resources, function(item, index) {
 
-			if (_.size(loader.resources) > 0) {
+					if (App.Assets[index]) {
 
-				loader.load(_.bind(function (loader, resources) {
+						App.Assets[index].data = item;
+						App.Assets[index].loaded = true;
 
-					App.resources = resources;
+					} else {
 
-					App.create();
+						App.Assets[index] = {
+							data: item,
+							loaded: true
+						};
 
-				}, this));
+					}
 
-			} else {
+				});
 
-				App.create();
+				loader.pixiReady = true;
+				check_complete();
 
-			}
+			}, this));
 
-		};
+		} else {
+
+			loader.pixiReady = true;
+			check_complete();
+
+		}
 
 		if (fonts.length > 0) {
 
-			window.WebFont.load({
+			window.WebFontConfig = {
 				custom: {
 					families: _.map(fonts, function (font) {
 						return font[0];
@@ -137,17 +203,143 @@ var Game = new Class({
 					})
 				},
 				active: function () {
-					load_images();
+
+					_.each(fonts, function(font) {
+
+						App.Assets[font[0]].loaded = true;
+
+					});
+
+					loader.webFontsReady = true;
+					check_complete();
+
 				}
+			};
+
+			if (window.WebFont) window.WebFont.load();
+
+			else {
+
+				(function(d) {
+					var wf = d.createElement('script'), s = d.scripts[0];
+					wf.src = 'https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js';
+					wf.async = true;
+					s.parentNode.insertBefore(wf, s);
+				})(document);
+
+			}
+
+		} else {
+
+			loader.webFontsReady = true;
+			check_complete();
+
+		}
+
+		if (sounds.length > 0) {
+
+			if (!createjs.Sound) throw new Error('SoundJS not found.');
+
+			for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
+
+			createjs.Sound.on("fileload", function(event) {
+
+				Broadcast.call("Sound Loaded", [event.id]);
+
+				//TODO: Check sounds loading process
+				App.Assets[event.id].loaded = true;
+
+				//TODO: Wait all sounds before load complete callback
+				loader.soundsReady = true;
+				check_complete();
+
+			}, this);
+
+		} else {
+
+			loader.soundsReady = true;
+			check_complete();
+
+		}
+
+		if (images.length > 0) {
+
+			_.each(images, function(data) {
+
+				var img = new Image();
+				img.src = data[1];
+
+				//TODO: Add dom images load event (test if image already loaded in css, load event will not work)
+				App.Assets[data[0]].loaded = true;
+
+			});
+
+			//TODO: Wait dom images before load complete callback (test if image already loaded in css, load event will not work)
+			loader.domImagesReady = true;
+			check_complete();
+
+		} else {
+
+			loader.domImagesReady = true;
+			check_complete();
+
+		}
+
+		if (texts.length > 0) {
+
+			_.each(texts, function(data) {
+
+				var xhr = new XMLHttpRequest();
+
+				xhr.open('GET', data[1], true);
+
+				xhr.send();
+
+				xhr.onreadystatechange = function () {
+
+					if (xhr.readyState == 4 && xhr.status == 200) {
+
+						App.Assets[data[0]].data = xhr.responseText;
+						App.Assets[data[0]].loaded = true;
+
+						loader.textsReady = true;
+
+						_.each(texts, function(data) {
+
+							if (!App.Assets[data[0]] || !App.Assets[data[0]].loaded) loader.textsReady = false;
+
+						});
+
+						check_complete();
+
+					}
+
+				};
+
 			});
 
 		} else {
 
-			load_images();
+			loader.textsReady = true;
+			check_complete();
 
 		}
 
-		this.loadSounds(sounds);
+		function check_complete() {
+
+			if (loader.pixiReady && loader.webFontsReady && loader.soundsReady && loader.domImagesReady && loader.textsReady) {
+
+				if (next) {
+
+					next.call(this);
+
+					next = null;
+
+				}
+
+			}
+
+		}
 
 	},
 
@@ -256,22 +448,6 @@ var Game = new Class({
 
 	},
 
-	loadSounds: function (sounds) {
-
-		if (!sounds || sounds.length == 0) return;
-
-		if (!createjs.Sound) throw new Error('SoundJS not found!');
-
-		for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
-
-		createjs.Sound.on("fileload", function(event) {
-
-			Broadcast.call("Sound Loaded", [event.id]);
-
-		}, this);
-
-	},
-
 	play: function(name, volume, is_loop) {
 
 		if (createjs.Sound.loadComplete(name)) {
@@ -306,45 +482,56 @@ var Game = new Class({
 
 		if (App.IsTouchDevice) {
 
-			App.Renderer.view.addEventListener("touchstart", function(e) {
+			this.Stage.on("touchstart", function(e) {
 
-				Broadcast.call("Stage Press Down", [e]);
-
-			}, false);
-
-			App.Renderer.view.addEventListener("touchend", function(e) {
-
-				Broadcast.call("Stage Press Up", [e]);
+				Broadcast.call("Stage Press Down", [App.Stage, e]);
 
 			}, false);
 
-			App.Renderer.view.addEventListener("touchmove", function(e) {
+			this.Stage.on("touchend", function(e) {
 
-				Broadcast.call("Stage Press Move", [e]);
+				Broadcast.call("Stage Press Up", [App.Stage, e]);
+
+			}, false);
+
+			this.Stage.on("touchmove", function(e) {
+
+				Broadcast.call("Stage Press Move", [App.Stage, e]);
 
 			}, false);
 
 		} else {
 
-			App.Renderer.view.addEventListener("mousedown", function(e) {
+			this.Stage.on("mousedown", function(e) {
 
-				Broadcast.call("Stage Press Down", [e]);
-
-			}, false);
-
-			App.Renderer.view.addEventListener("mouseup", function(e) {
-
-				Broadcast.call("Stage Press Up", [e]);
+				Broadcast.call("Stage Press Down", [App.Stage, e]);
 
 			}, false);
 
-			App.Renderer.view.addEventListener("mousemove", function(e) {
+			this.Stage.on("mouseup", function(e) {
 
-				Broadcast.call("Stage Press Move", [e]);
+				Broadcast.call("Stage Press Up", [App.Stage, e]);
+
+			}, false);
+
+			this.Stage.on("mousemove", function(e) {
+
+				Broadcast.call("Stage Press Move", [App.Stage, e]);
 
 			}, false);
 
 		}
+
+	},
+
+	createEmptyTexture: function() {
+
+		var canvas = document.createElement('canvas');
+
+		canvas.width = 1;
+		canvas.height = 1;
+
+		this.emptyTexture = PIXI.Texture.fromCanvas(canvas);
 
 	}
 
