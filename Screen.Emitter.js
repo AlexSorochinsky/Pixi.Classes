@@ -5,7 +5,7 @@
 // Date of creation : 01.04.2017
 // Require: Class.js
 //-----------------------------------------------------------------------------
-// Set of Physics methods for Screen class
+// Set of particle emitter methods to Screen class
 //-----------------------------------------------------------------------------
 
 Class.Mixin(Screen, {
@@ -17,6 +17,14 @@ Class.Mixin(Screen, {
 			if (child_params.type == 'emitter') this.buildChildEmitter(child);
 
 		}, this, {index: this.Name + '-Emitter'});
+
+		Broadcast.on(this.Name + ' update', function() {
+
+			this.updateEmitters();
+
+		}, this, {index: this.Name + '-Emitter'});
+
+		this._emitters = [];
 
 	},
 
@@ -47,6 +55,8 @@ Class.Mixin(Screen, {
 					particle_scale = child_params.particleScale || [1, 2, 1, 2],
 					particle_rotation = child_params.particleRotation || [0, 0],
 					particle_alpha = child_params.particleAlpha || [1, 1],
+					particle_speed = child_params.particleSpeed || [0, 0],
+					particle_acceleration = child_params.particleAcceleration || [0, 0],
 					particle_tweens = child_params.particleTween;
 
 				var sprite = _.sample(images);
@@ -70,6 +80,12 @@ Class.Mixin(Screen, {
 				sprite.rotation = rotation;
 				sprite.alpha = alpha;
 
+				sprite.speedX = this.getParticleValue(particle_speed[0]) || 0;
+				sprite.speedY = this.getParticleValue(particle_speed[1]) || 0;
+
+				sprite.accelerationX = this.getParticleValue(particle_acceleration[0]) || 0;
+				sprite.accelerationY = this.getParticleValue(particle_acceleration[1]) || 0;
+
 				if (_.isFunction(particle_tweens)) particle_tweens = particle_tweens.apply(this, [sprite]);
 
 				this.tween(particle_tweens, sprite, function(tween_object) {
@@ -86,7 +102,35 @@ Class.Mixin(Screen, {
 
 			if (maximum_particles > 0) setTimeout(_.bind(arguments.callee, this), interval);
 
+			if (!_.contains(this._emitters, child)) this._emitters.push(child);
+
 		}, this), interval);
+
+	},
+
+	updateEmitters: function() {
+
+		_.each(this._emitters, function(container) {
+
+			if (container.children.length > 0) {
+
+				_.each(container.children, function(particle) {
+
+					if (particle.speedX) particle.position.x += particle.speedX * (this.updateTimeOffset / 1000);
+					if (particle.speedY) particle.position.y += particle.speedY * (this.updateTimeOffset / 1000);
+
+					if (particle.accelerationX) particle.speedX += particle.accelerationX * (this.updateTimeOffset / 1000);
+					if (particle.accelerationY) particle.speedY += particle.accelerationY * (this.updateTimeOffset / 1000);
+
+				}, this);
+
+			} else {
+
+				this._emitters = _.without(this._emitters, container);
+
+			}
+
+		}, this);
 
 	},
 
@@ -99,6 +143,14 @@ Class.Mixin(Screen, {
 		if (((x*x)/((x_length/2)*(x_length/2)) + (y*y)/((y_length/2)*(y_length/2))) <= 1) return [x, y];
 
 		else return this.getPointInsideEllipse(x_length, y_length);
+
+	},
+
+	getParticleValue: function(value, params) {
+
+		if (_.isArray(value)) return _.random(value[0], value[1]);
+		else if (_.isFunction(value)) return value.apply(this, params || []);
+		return value;
 
 	}
 

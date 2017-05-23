@@ -16,6 +16,20 @@ var MRAID = {
 
 		if (is_show_logger) this.showLogger();
 
+		this.setup();
+
+		this.checkReady(function() {
+
+			if (window.mraidReady) window.mraidReady();
+
+			else MRAID.showApp();
+
+		});
+
+	},
+
+	setup: function() {
+
 		this.isMRAID = (typeof mraid == 'object');
 
 		this.isTouchDevice = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
@@ -30,13 +44,11 @@ var MRAID = {
 
 		this.setupCss();
 
-		this.checkReady();
-
 	},
 
 	setupViewport: function() {
 
-		this.log('setupViewport');
+		this.log('Setup viewport...');
 
 		var element = document.querySelector("meta[name=viewport]");
 
@@ -59,7 +71,7 @@ var MRAID = {
 
 	setupCharset: function() {
 
-		this.log('setupCharset');
+		this.log('Setup charset...');
 
 		var element = document.querySelector("meta[charset]");
 
@@ -81,62 +93,65 @@ var MRAID = {
 
 	setupCss: function() {
 
-		this.log('setupCss');
+		this.log('Setup css...');
 
 		var style = document.createElement("style");
-		style.appendChild(document.createTextNode("html, body {" +
+		style.appendChild(document.createTextNode(
+			"html, body {" +
 			"width: 100%;" +
 			"height: 100%;" +
 			"padding: 0;" +
 			"margin: 0;" +
 			"overflow: hidden;" +
-		"}"));
+				"font-family: \"Verdana\", \"Droid Sans\"" +
+			"}"
+		));
 
 		document.head.appendChild(style);
 
 	},
 
-	checkReady: function() {
+	checkReady: function (next) {
 
 		this.log('checkReady');
 
-		var readyStateCheckInterval = setInterval(_.bind(function () {
+		var readyStateCheckInterval = setInterval(function () {
 
 			if (document.readyState === "complete") {
 
-				this.log('document.readyState === "complete"');
+				MRAID.log('document.readyState === "complete"');
 
 				clearInterval(readyStateCheckInterval);
 
-				this._domReady = true;
+				MRAID._domReady = true;
 
-				this._checkReady();
+				MRAID._checkReady(next);
 
 			}
 
-		}, this), 10);
+		}, 10);
 
 		if (this.isMRAID) {
 
 			if (mraid.getState() == 'loading') {
 
-				mraid.addEventListener("ready", _.bind(function() {
+				mraid.addEventListener("ready", function () {
 
-					this.log('mraid ready');
+					MRAID.log('mraid ready');
 
 					mraid.removeEventListener("ready", arguments.callee);
 
-					this._mraidReady = true;
+					MRAID._mraidReady = true;
 
-					this._checkReady();
+					MRAID._checkReady(next);
 
-				}, this));
+				});
 
 			} else {
 
 				this._mraidReady = true;
 
-				this._checkReady();
+				this._checkReady(next);
 
 			}
 
@@ -144,17 +159,17 @@ var MRAID = {
 
 			this._mraidReady = true;
 
-			this._checkReady();
+			this._checkReady(next);
 
 		}
 
 	},
 
-	_checkReady: function() {
+	_checkReady: function (next) {
 
 		if (this._mraidReady && this._domReady) {
 
-			this.showApp();
+			if (next) next();
 
 		}
 
@@ -164,13 +179,13 @@ var MRAID = {
 
 		if (this.isMRAID) {
 
-			mraid.addEventListener("stateChange", _.bind(function(state) {
+			mraid.addEventListener("stateChange", function (state) {
 
 				MRAID.log('mraid stateChange', state);
 
 				Broadcast.call("MRAID State Changed");
 
-			}, this));
+			});
 
 			if (mraid.usecustomclose) mraid.usecustomclose(true);
 

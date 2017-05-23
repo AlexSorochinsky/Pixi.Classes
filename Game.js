@@ -42,11 +42,23 @@ var Game = new Class({
 
 		createjs.Ticker.timingMode = createjs.Ticker.RAF;
 
-		this.Renderer = PIXI.autoDetectRenderer(300, 300, {
-			clearBeforeRender: true,
-			transparent: (this.StageBackgroundColor === false),
-			backgroundColor: this.StageBackgroundColor
-		});
+		if (this.ForceCanvasRenderer) {
+
+			this.Renderer = new PIXI.CanvasRenderer(300, 300, {
+				clearBeforeRender: true,
+				transparent: (this.StageBackgroundColor === false),
+				backgroundColor: this.StageBackgroundColor
+			});
+
+		} else {
+
+			this.Renderer = PIXI.autoDetectRenderer(300, 300, {
+				clearBeforeRender: true,
+				transparent: (this.StageBackgroundColor === false),
+				backgroundColor: this.StageBackgroundColor
+			});
+
+		}
 
 		this.Renderer.plugins.interaction.moveWhenInside = true;
 
@@ -133,11 +145,11 @@ var Game = new Class({
 
 					if (url.indexOf('http') !== 0) url = App.srcURL + url + '?v=' + this.Version;
 
-					if (asset.type == 'image') pixi_loader.add(asset.name, url);
+					if (asset.type == 'image') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
 
-					else if (asset.type == 'atlas') pixi_loader.add(asset.name, url);
+					else if (asset.type == 'atlas') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
 
-					else if (asset.type == 'bitmap-font') pixi_loader.add(asset.name, url);
+					else if (asset.type == 'bitmap-font') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
 
 					else if (asset.type == 'web-font') fonts.push([asset.name, url]);
 

@@ -18,8 +18,6 @@ var Screen = new Class({
 
 		this._childs = [];
 
-		this._emitters = [];
-
 		this.state = 'idle';
 
 		_.each(this.Events, function(func, name) {
@@ -1094,9 +1092,9 @@ var Screen = new Class({
 
 		for (var i=0; this._containers[i]; i++) this._containers[i].visible = false;
 
-		Broadcast.off("Game Update", this.update, this);
+		Broadcast.off("Game Update", this);
 
-		Broadcast.off("Game Resize", this.resize, this);
+		Broadcast.off("Game Resize", this);
 
 		Broadcast.call(this.Name + ' hided');
 

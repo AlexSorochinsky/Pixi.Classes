@@ -8,25 +8,19 @@
 // Service class for server-side requests and business logic
 //-----------------------------------------------------------------------------
 
-var Service = function(properties) {
+var Service = new Class({
 
-	var _class = new Class(properties);
+	initialize: function() {
 
-	var instance = new _class(Service.prototype);
-
-	if (!instance.Actions) instance.Actions = {};
+		if (!this.Actions) this.Actions = {};
 
 	Broadcast.on('Server Data Received', function(data) {
 
 		this.checkAction(data);
 
-	}, instance);
+		}, this);
 
-	return instance;
-
-};
-
-Service.prototype = {
+	},
 
 	checkAction: function(data) {
 
@@ -38,4 +32,4 @@ Service.prototype = {
 
 	}
 
-};
+});
