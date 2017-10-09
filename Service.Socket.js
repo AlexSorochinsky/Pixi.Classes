@@ -18,7 +18,11 @@ Class.Mixin(Service, {
 
 	connectSocket: function(url) {
 
+		this.socketUrl = url;
+
 		if (this.Socket && this.Socket.readyState !== this.Socket.CLOSED) return;
+
+		clearTimeout(this.reconnectTimeout);
 
 		this.Socket = new WebSocket(url);
 
@@ -79,9 +83,43 @@ Class.Mixin(Service, {
 
 	sendToSocket: function (object) {
 
-		if (this.Socket && this.Connected) this.Socket.send(JSON.stringify(object));
+		if (this.Socket && this.Connected) {
 
-		else console.warn("Socket not connected in .sendToSocket();", object);
+			if (_.isString(object)) {
+
+				var o = {};
+
+				o[object] = true;
+
+				object = o;
+
+			}
+
+			this.Socket.send(JSON.stringify(object));
+
+		} else {
+
+			console.warn("Socket not connected in .sendToSocket();", object);
+
+		}
+
+	},
+
+	reconnectSocket: function() {
+
+		if (this.Socket && this.Connected) {
+
+			this.Socket.close();
+
+		}
+
+		Broadcast.on('Socket Connection Closed', function() {
+
+			this.connectSocket(this.socketUrl);
+
+			Broadcast.off('Socket Connection Closed', this);
+
+		}, this);
 
 	}
 

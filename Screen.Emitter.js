@@ -32,21 +32,31 @@ Class.Mixin(Screen, {
 
 		child.emit = _.bind(function() {
 
+			child.isPaused = false;
+
 			this.emit(child);
+
+		}, this);
+
+		child.pause = _.bind(function() {
+
+			this.pauseEmitter(child);
 
 		}, this);
 
 	},
 
-	emit: function(child) {
+	emit: function(emitter) {
 
-		var child_params = child._child_params;
+		var child_params = emitter._child_params;
 
-		var maximum_particles = child_params.limit || 20,
+		var maximum_particles = ('limit' in child_params) ? child_params.limit : 20,
 			interval = child_params.interval || 100,
 			count_per_interval = child_params.count || 2;
 
 		setTimeout(_.bind(function() {
+
+			if (emitter.isPaused) return;
 
 			for (var i=0; i<count_per_interval; i++) {
 
@@ -61,11 +71,11 @@ Class.Mixin(Screen, {
 
 				var sprite = _.sample(images);
 
-				if (_.isFunction(sprite)) sprite = sprite.apply(this, [child]);
+				if (_.isFunction(sprite)) sprite = sprite.apply(this, [emitter]);
 
-				if (_.isString(sprite)) sprite = this.buildChild(child, {type: 'sprite', image: sprite}, true);
+				if (_.isString(sprite)) sprite = this.buildChild(emitter, {type: 'sprite', image: sprite}, true);
 
-				if (particle_scale.length == 2) particle_scale = [particle_scale[0], particle_scale[1], particle_scale[0], particle_scale[1]];
+				if (particle_scale.length === 2) particle_scale = [particle_scale[0], particle_scale[1], particle_scale[0], particle_scale[1]];
 
 				var position = [0, 0],
 					scale_x = _.random(particle_scale[0] * 1000, particle_scale[1] * 1000) / 1000,
@@ -73,7 +83,9 @@ Class.Mixin(Screen, {
 					rotation = _.random(particle_rotation[0] * 1000, particle_rotation[1] * 1000) / 1000,
 					alpha = _.random(particle_alpha[0] * 1000, particle_alpha[1] * 1000) / 1000;
 
-				if (start_position[0] == 'ellipse') position = this.getPointInsideEllipse(start_position[1], start_position[2]);
+				if (_.isFunction(start_position)) position = start_position.apply(this, [sprite]);
+
+				else if (start_position[0] === 'ellipse') position = this.getPointInsideEllipse(start_position[1], start_position[2]);
 
 				sprite.position.set(position[0], position[1]);
 				sprite.scale.set(scale_x, scale_y);
@@ -88,23 +100,37 @@ Class.Mixin(Screen, {
 
 				if (_.isFunction(particle_tweens)) particle_tweens = particle_tweens.apply(this, [sprite]);
 
-				this.tween(particle_tweens, sprite, function(tween_object) {
+				if (_.isObject(particle_tweens) || _.isArray(particle_tweens)) {
 
-					tween_object.targets[0].destroy();
+					this.tween(particle_tweens, sprite, function(tween_object) {
 
-				}, {override: false});
+						tween_object.targets[0].destroy();
 
-				maximum_particles--;
+					}, {override: false});
 
-				if (maximum_particles <= 0) break;
+				}
+
+				if (maximum_particles !== null) {
+
+					maximum_particles--;
+
+					if (maximum_particles <= 0) break;
+
+				}
 
 			}
 
-			if (maximum_particles > 0) setTimeout(_.bind(arguments.callee, this), interval);
+			if (maximum_particles === null || maximum_particles > 0) setTimeout(_.bind(arguments.callee, this), interval);
 
-			if (!_.contains(this._emitters, child)) this._emitters.push(child);
+			if (!_.contains(this._emitters, emitter)) this._emitters.push(emitter);
 
 		}, this), interval);
+
+	},
+
+	pauseEmitter: function(emitter) {
+
+		emitter.isPaused = true;
 
 	},
 

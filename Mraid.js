@@ -12,6 +12,8 @@ var MRAID = {
 
 	targetURL: '',
 
+	webMode: 'alert', //'alert', 'redirect' or 'none'
+
 	start: function(is_show_logger) {
 
 		if (is_show_logger) this.showLogger();
@@ -30,7 +32,7 @@ var MRAID = {
 
 	setup: function() {
 
-		this.isMRAID = (typeof mraid == 'object');
+		this.isMRAID = (typeof mraid === 'object');
 
 		this.isTouchDevice = (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
 
@@ -98,11 +100,11 @@ var MRAID = {
 		var style = document.createElement("style");
 		style.appendChild(document.createTextNode(
 			"html, body {" +
-			"width: 100%;" +
-			"height: 100%;" +
-			"padding: 0;" +
-			"margin: 0;" +
-			"overflow: hidden;" +
+				"width: 100%;" +
+				"height: 100%;" +
+				"padding: 0;" +
+				"margin: 0;" +
+				"overflow: hidden;" +
 				"font-family: \"Verdana\", \"Droid Sans\"" +
 			"}"
 		));
@@ -209,7 +211,9 @@ var MRAID = {
 
 		if (this.isMRAID) mraid.close();
 
-		else alert('Close!');
+		else if (this.webMode === 'alert') alert('Close!');
+
+		else if (this.webMode === 'redirect') window.close();
 
 	},
 
@@ -217,13 +221,15 @@ var MRAID = {
 
 		if (this.isMRAID) mraid.open(this.targetURL);
 
-		else alert('Open: ' + this.targetURL);
+		else if (this.webMode === 'alert') alert('Open: ' + this.targetURL);
+
+		else if (this.webMode === 'redirect') window.location.href = this.targetURL;
 
 	},
 
 	log: function() {
 
-		if (typeof console == 'object') console.log.apply(console, Array.prototype.slice.call(arguments));
+		if (typeof console === 'object') console.log.apply(console, Array.prototype.slice.call(arguments));
 
 	},
 

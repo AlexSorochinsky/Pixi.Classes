@@ -8,7 +8,7 @@
 // Set of DOM methods for Screen class
 //-----------------------------------------------------------------------------
 
-Class.Mixin(Screen, {
+Screen.DOM = Class.Mixin(Screen, {
 
 	initialize: function() {
 
@@ -18,7 +18,7 @@ Class.Mixin(Screen, {
 
 			_.each(this.Containers, function(container_params) {
 
-				if (container_params.type == 'dom-container') this.buildDOMContainer(container_params);
+				if (container_params.type === 'dom-container') this.buildDOMContainer(container_params);
 
 			}, this);
 
@@ -30,13 +30,13 @@ Class.Mixin(Screen, {
 
 			_.each(this.Containers, function(child_params) {
 
-				if (child_params.type == 'dom-container') {
+				if (child_params.type === 'dom-container') {
 
 					var container = this._dom_containers[child_params.name];
 
 					var scale = App.Scale;
 
-					if (child_params.scaleStrategy) scale = container.scale = this.getScaleByStrategy(child_params.scaleStrategy);
+					if (child_params.scaleStrategy) scale = container.scale = this.getDOMScaleByStrategy(child_params.scaleStrategy);
 
 					if (child_params.position) {
 
@@ -89,6 +89,7 @@ Class.Mixin(Screen, {
 		var container_name = container_params.name;
 
 		var container = this._dom_containers[container_name] = this[container_name] = {
+			params: container_params,
 			el: document.createElement('div'),
 			els: {},
 			x: 0,
@@ -101,12 +102,12 @@ Class.Mixin(Screen, {
 				var transform_origin = this.transformOrigin.join(' ');
 				var transform = this.positionTransform;
 
-				if (transform_origin != this._transform_origin) {
+				if (transform_origin !== this._transform_origin) {
 					this.el.style.transformOrigin = transform_origin;
 					this._transform_origin = transform_origin;
 				}
 
-				if (transform != this._transform) {
+				if (transform !== this._transform) {
 					this.el.style.WebkitTransform = transform;
 					this.el.style.transform = transform;
 					this._transform = transform;
@@ -165,6 +166,10 @@ Class.Mixin(Screen, {
 
 		var el = document.createElement(params[0]);
 
+		el.params = params[2] || {};
+
+		if (!el.params.scale) el.params.scale = {};
+
 		el.className = params[1];
 
 		if (!els[el.className]) els[el.className] = el;
@@ -172,8 +177,6 @@ Class.Mixin(Screen, {
 		else els[el.className] = [els[el.className], el];
 
 		if (_.isObject(params[2])) {
-
-			if (params[2].scale) el._scaleStyles = params[2].scale;
 
 			if (params[2].event) this.applyDOMEvents(el, params[2].event, params);
 
@@ -197,6 +200,45 @@ Class.Mixin(Screen, {
 
 	},
 
+	getDOMScaleByStrategy: function(scale_strategy) {
+
+		var scale = 1,
+			width = App.Width / App.PixelRatio,
+			height = App.Height / App.PixelRatio,
+			max_scale = 100000;
+
+		if (!_.isArray(scale_strategy)) scale_strategy = [scale_strategy];
+
+		if (scale_strategy[0] === 'fit-to-screen') {
+
+			if (scale_strategy[1]) width = scale_strategy[1];
+			if (scale_strategy[2]) height = scale_strategy[2];
+
+			scale = Math.min(App.Width / App.PixelRatio / width, App.Height / App.PixelRatio / height);
+
+			if (scale_strategy[3] === false) max_scale = 1;
+			else if (scale_strategy[3] === 'pixel-ratio') max_scale = App.PixelRatio;
+
+			if (scale > max_scale) scale = max_scale;
+
+		} else if (scale_strategy[0] === 'cover-screen') {
+
+			if (scale_strategy[1]) width = scale_strategy[1];
+			if (scale_strategy[2]) height = scale_strategy[2];
+
+			scale = Math.max(App.Width / App.PixelRatio / width, App.Height / App.PixelRatio / height);
+
+			if (scale_strategy[3] === false) max_scale = 1;
+			else if (scale_strategy[3] === 'pixel-ratio') max_scale = App.PixelRatio;
+
+			if (scale > max_scale) scale = max_scale;
+
+		}
+
+		return scale;
+
+	},
+
 	applyDOMEvents: function (el, event_params, child_params) {
 
 		if (_.isString(event_params)) event_params = {name: event_params};
@@ -209,15 +251,17 @@ Class.Mixin(Screen, {
 
 			el.addEventListener("touchstart", function (e) {
 
-				var clickpos = Screen.prototype.getMousePositionDistance(e);
+				var clickpos = Screen.DOM.getMousePositionDistance(e);
 
 				this.setAttribute('clickpos', clickpos);
+
+				Broadcast.call(name + ' ' + code + ' down', [e, el]);
 
 			}, false);
 
 			el.addEventListener("touchend", function (e) {
 
-				var clickpos = Screen.prototype.getMousePositionDistance(e);
+				var clickpos = Screen.DOM.getMousePositionDistance(e);
 
 				if (Math.abs(parseFloat(this.getAttribute('clickpos')) - clickpos) < 20) Broadcast.call(name + ' ' + code + ' click', [e, el]);
 
@@ -353,7 +397,7 @@ Class.Mixin(Screen, {
 
 				el._scale = scale || el._scale;
 
-				var styles = el._scaleStyles;
+				var styles = el.params.scale;
 
 				_.each(styles, function(style_params, style) {
 
@@ -393,7 +437,7 @@ Class.Mixin(Screen, {
 
 	setStyles: function(el, styles) {
 
-		_.extend(el._scaleStyles, styles);
+		_.extend(el.params.scale, styles);
 
 		this.scaleStyles([el]);
 

@@ -84,41 +84,41 @@ var Screen = new Class({
 
 	buildChild: function(container, child_params, is_reposition) {
 
-		var child;
+		var child, i;
 
 		this.processOrientationProperties(child_params);
 
-		if (child_params.type == 'sprite') {
+		if (child_params.type === 'sprite') {
 
 			child = new PIXI.Sprite(this.getTexture(child_params.frame || child_params.image));
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'tiling-sprite') {
+		} else if (child_params.type === 'tiling-sprite') {
 
 			child = new PIXI.TilingSprite(this.getTexture(child_params.frame || child_params.image), child_params.width, child_params.height);
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'text') {
+		} else if (child_params.type === 'text') {
 
 			child = new PIXI.Text(child_params.text, child_params.styles);
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'bitmap-text') {
+		} else if (child_params.type === 'bitmap-text') {
 
 			child = new PIXI.extras.BitmapText(child_params.text, child_params.styles);
 
 			container.addChild(child);
 
-		}  else if (child_params.type == 'multistyle-text') {
+		}  else if (child_params.type === 'multistyle-text') {
 
 			child = new MultiStyleText(child_params.text, child_params.styles);
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'graphics') {
+		} else if (child_params.type === 'graphics') {
 
 			child = new PIXI.Graphics();
 
@@ -126,13 +126,31 @@ var Screen = new Class({
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'movie-clip') {
+		} else if (child_params.type === 'movie-clip') {
 
 			if (child_params.frameTemplate) {
 
 				child_params.frames = [];
 
-				for (var i=child_params.frameStart; i<=child_params.frameEnd; i++) child_params.frames.push(child_params.frameTemplate.replace('??', i<10?'0'+i:i));
+				if ("frameStart" in child_params) {
+
+					for (i=child_params.frameStart; i<=child_params.frameEnd; i++) {
+
+						if (!child_params.frameFilter || child_params.frameFilter(i)) child_params.frames.push(child_params.frameTemplate.replace('???', i<100?(i<10?'00'+i:'0'+i):i).replace('??', i<10?'0'+i:i));
+
+					}
+
+				} else if ("frameNumbers" in child_params) {
+
+					for (i=0; i<=child_params.frameNumbers.length; i++) {
+
+						var c = child_params.frameNumbers[i];
+
+						if (!child_params.frameFilter || child_params.frameFilter(c)) child_params.frames.push(child_params.frameTemplate.replace('???', c<100?(c<10?'00'+c:'0'+c):c).replace('??', c<10?'0'+c:c));
+
+					}
+
+				}
 
 			}
 
@@ -150,7 +168,7 @@ var Screen = new Class({
 
 			container.addChild(child);
 
-		} else if (child_params.type == 'container') {
+		} else if (child_params.type === 'container') {
 
 			child = new PIXI.Container();
 
@@ -180,9 +198,9 @@ var Screen = new Class({
 
 			if (event_params.button) {
 
-			child.defaultCursor = 'pointer';
+				child.defaultCursor = 'pointer';
 
-			child.buttonMode = true;
+				child.buttonMode = true;
 
 			}
 
@@ -194,7 +212,9 @@ var Screen = new Class({
 		}
 
 		if (child_params.hit) {
-			if (child_params.hit[0] == 'circle') child.hitArea = new PIXI.Circle (0, 0, child_params.hit[1]);
+			if (child_params.hit[0] === 'circle') child.hitArea = new PIXI.Circle (child_params.hit[1], child_params.hit[2], child_params.hit[3]);
+			else if (child_params.hit[0] === 'polygon') child.hitArea = new PIXI.Polygon(child_params.hit[1]);
+			else if (child_params.hit[0] === 'rect') child.hitArea = new PIXI.Rectangle(child_params.hit[1], child_params.hit[2], child_params.hit[3], child_params.hit[4]);
 		}
 
 		if (child_params.visible === false) child.visible = false;
@@ -211,25 +231,35 @@ var Screen = new Class({
 
 		if (child_params.mask) {
 
-			if (child_params.mask[0] == 'rect') {
+			if (_.contains(['rect', 'circle', 'arc'], child_params.mask[0])) {
 
 				child.mask = new PIXI.Graphics();
 
 				child.mask.beginFill(0x000000);
 
-				if (child_params.mask[5] === true) {
+				if (child_params.mask[0] === 'rect') {
 
-					child.mask.drawRect(child_params.mask[1], child_params.mask[2], child_params.mask[3], child_params.mask[4]);
+					child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
 
-					child.addChild(child.mask);
+					if (child_params.mask[5] === true) child.addChild(child.mask);
 
-				} else {
+				} else if (child_params.mask[0] === 'circle') {
 
-				child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
+					child.mask.drawCircle(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]));
+
+					if (child_params.mask[4] === true) child.addChild(child.mask);
+
+				} else if (child_params.mask[0] === 'arc') {
+
+					child.mask.moveTo(0, 0);
+
+					child.mask.arc(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]), this.calculate(child_params.mask[5]));
+
+					if (child_params.mask[6] === true) child.addChild(child.mask);
 
 				}
 
-			} else if (child_params.mask[0] == 'sprite') {
+			} else if (child_params.mask[0] === 'sprite') {
 
 				if (!child_params.mask[1].name) child_params.mask[1].name = child.name + ' mask';
 
@@ -284,11 +314,29 @@ var Screen = new Class({
 
 	},
 
-	getTexture: function(name) {
+	rebuildChild: function(sprite) {
 
-		if (App.resources[name]) return App.resources[name].texture;
+		if (_.isString(sprite)) sprite = this[sprite];
 
-		else if (PIXI.utils.TextureCache[name]) return PIXI.utils.TextureCache[name];
+		if (sprite) {
+
+			this.buildChild(sprite.parent, sprite._child_params, true);
+
+			sprite.destroy();
+
+		}
+
+	},
+
+	getTexture: function(value) {
+
+		if (_.isFunction(value)) value = value.call(this);
+
+		if (_.isObject(value)) return value;
+
+		if (App.resources[value]) return App.resources[value].texture;
+
+		else if (PIXI.utils.TextureCache[value]) return PIXI.utils.TextureCache[value];
 
 		else return App.emptyTexture;
 
@@ -322,7 +370,7 @@ var Screen = new Class({
 
 		_.each(this.Containers, function(child_params) {
 
-			if (child_params.type == 'container') {
+			if (child_params.type === 'container') {
 
 				var child = this[child_params.name];
 
@@ -364,6 +412,27 @@ var Screen = new Class({
 
 			child.scale.set(this.calculate(child_params.scale[0]), this.calculate(child_params.scale[1]));
 
+			if ('scaleGlobal' in child_params) {
+
+				if (!_.isArray(child_params.scaleGlobal)) child_params.scaleGlobal = [child_params.scaleGlobal, child_params.scaleGlobal];
+
+				var parent = child.parent,
+					scale_x = child.scale.x,
+					scale_y = child.scale.y;
+
+				while (parent && parent !== App.Stage) {
+
+					if (child_params.scaleGlobal[0]) scale_x /= parent.scale.x;
+					if (child_params.scaleGlobal[1]) scale_y /= parent.scale.y;
+
+					parent = parent.parent;
+
+				}
+
+				child.scale.set(scale_x, scale_y);
+
+			}
+
 		} else if ('scaleStrategy' in child_params) {
 
 			var scale = null;
@@ -388,19 +457,31 @@ var Screen = new Class({
 
 		if (child_params.mask) {
 
-			if (child_params.mask[0] == 'rect') {
+			if (_.contains(['rect', 'circle', 'arc'], child_params.mask[0])) {
 
-				if (child_params.mask[5] !== true) {
+				child.mask.clear();
 
-					child.mask.clear();
+				child.mask.moveTo(0, 0);
 
-					child.mask.beginFill(0x000000);
+				child.mask.beginFill(0x000000);
 
-					child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
+				if (child_params.mask[0] === 'rect') {
+
+					if (child_params.mask[5] !== true) child.mask.drawRect(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]));
+
+				} else if (child_params.mask[0] === 'circle') {
+
+					child.mask.drawCircle(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]));
+
+				} else if (child_params.mask[0] === 'arc') {
+
+					child.mask.moveTo(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]));
+
+					child.mask.arc(this.calculate(child_params.mask[1]), this.calculate(child_params.mask[2]), this.calculate(child_params.mask[3]), this.calculate(child_params.mask[4]), this.calculate(child_params.mask[5]));
 
 				}
 
-			} else if (child_params.mask[0] == 'sprite') {
+			} else if (child_params.mask[0] === 'sprite') {
 
 				this.resizeChild(child.mask);
 
@@ -416,7 +497,7 @@ var Screen = new Class({
 
 			_.each(child_params.draw, function(shape) {
 
-				if (shape[0] == 'rect') {
+				if (shape[0] === 'rect') {
 
 					child.beginFill(shape[5]);
 
@@ -424,9 +505,33 @@ var Screen = new Class({
 
 					child.drawRect(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]), this.calculate(shape[4]));
 
+				} else if (shape[0] === 'circle') {
+
+					child.beginFill(shape[4]);
+
+					child.fillAlpha = shape[5] || 1;
+
+					child.drawCircle(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]));
+
 				}
 
 			}, this);
+
+		}
+
+		if (child_params.styles) {
+
+			if (child_params.type === 'text') child.style = child_params.styles;
+
+            if (child_params.type === 'multistyle-text') child.styles = child_params.styles;
+
+		}
+
+		if (child.anchor) {
+
+			if (child_params.anchor) child.anchor.set(child_params.anchor[0], child_params.anchor[1]);
+
+			else child.anchor.set(0.5, 0.5);
 
 		}
 
@@ -451,31 +556,31 @@ var Screen = new Class({
 		var scale = 1,
 			width = App.Width,
 			height = App.Height,
-			max_scale = 1;
+			max_scale = 100000;
 
 		if (!_.isArray(scale_strategy)) scale_strategy = [scale_strategy];
 
-		if (scale_strategy[0] == 'fit-to-screen') {
+		if (scale_strategy[0] === 'fit-to-screen') {
 
 			if (scale_strategy[1]) width = scale_strategy[1];
 			if (scale_strategy[2]) height = scale_strategy[2];
 
 			scale = Math.min(App.Width / width, App.Height / height);
 
-			if (scale_strategy[3] === false) max_scale = 100000;
-			else if (scale_strategy[3] == 'pixel-ratio') max_scale = App.PixelRatio;
+			if (scale_strategy[3] === false) max_scale = 1;
+			else if (scale_strategy[3] === 'pixel-ratio') max_scale = App.PixelRatio;
 
 			if (scale > max_scale) scale = max_scale;
 
-		} else if (scale_strategy[0] == 'cover-screen') {
+		} else if (scale_strategy[0] === 'cover-screen') {
 
 			if (scale_strategy[1]) width = scale_strategy[1];
 			if (scale_strategy[2]) height = scale_strategy[2];
 
 			scale = Math.max(App.Width / width, App.Height / height);
 
-			if (scale_strategy[3] === false) max_scale = 100000;
-			else if (scale_strategy[3] == 'pixel-ratio') max_scale = App.PixelRatio;
+			if (scale_strategy[3] === false) max_scale = 1;
+			else if (scale_strategy[3] === 'pixel-ratio') max_scale = App.PixelRatio;
 
 			if (scale > max_scale) scale = max_scale;
 
@@ -511,11 +616,11 @@ var Screen = new Class({
 
 				}
 
-				if (part == 'width') result += App.Width * special_multiplier * direction_multiplier;
+				if (part === 'width') result += App.Width * special_multiplier * direction_multiplier;
 
-				else if (part == 'height') result += App.Height * special_multiplier * direction_multiplier;
+				else if (part === 'height') result += App.Height * special_multiplier * direction_multiplier;
 
-				else if (part == 'scale') result += App.Scale * special_multiplier * direction_multiplier;
+				else if (part === 'scale') result += App.Scale * special_multiplier * direction_multiplier;
 
 				else if (part.indexOf('width/') === 0) result += App.Width / parseFloat(part.replace('width/', '')) * special_multiplier * direction_multiplier;
 
@@ -529,7 +634,11 @@ var Screen = new Class({
 
 			} else if (_.isFunction(part)) {
 
-				result += part.apply(this, []);
+				var f_result = part.apply(this, []);
+
+				if (_.isString(f_result)) result = f_result;
+
+				else result += f_result;
 
 			} else {
 
@@ -755,6 +864,10 @@ var Screen = new Class({
 
 				}
 
+			} else if (_.isObject(out)) {
+
+				this.tween(out, sprite);
+
 			}
 
 			var over = event_params.over;
@@ -820,7 +933,9 @@ var Screen = new Class({
 			sprite
 				.on('touchstart', _.bind(on_down_call, this))
 				.on('touchend', _.bind(on_up_call, this))
-				.on('touchendoutside', _.bind(on_up_out_call, this));
+				.on('touchendoutside', _.bind(on_up_out_call, this))
+				.on('touchenter', _.bind(on_over_call, this))
+				.on('touchleave', _.bind(on_out_call, this));
 
 			if (event_params.move) {
 
@@ -909,65 +1024,94 @@ var Screen = new Class({
 		tween_object.next = next;
 		tween_object.options = options;
 		tween_object.tweens = [];
+		tween_object.timeouts = [];
 
 		if (!tween_object.index) tween_object.index = _.uniqueId();
 
 		if (!tween_object.startingProps) tween_object.startingProps = tween_props;
 
+		var _this = this;
+
 		for (var i = 0; targets[i]; i++) {
 
-			var target = targets[i] = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]);
+			(function(target) {
 
-			if (!target) throw new Error('There are no target with name "' + targets[i] + '". Look at ' + this.Name + ' > .tween()');
+				if (!target) throw new Error('There are no target with name "' + targets[i] + '". Look at ' + _this.Name + ' > .tween()');
 
-			this._tween(target, tween_object, options.delay || 0, {
-				override: ('override' in options) ? options.override : true,
-				loop: options.loop || false,
-				onChange: options.onChange
-			});
+				var _tween_call = function() {
+
+					_this._tween(target, tween_object, {
+						override: ('override' in options) ? options.override : true,
+						loop: options.loop || false,
+						onChange: options.onChange
+					});
+
+				};
+
+				if (tween_object.props.wait) tween_object.timeouts.push(setTimeout(_tween_call, tween_object.props.wait));
+
+				else _tween_call();
+
+			})(targets[i] = _.isObject(targets[i]) ? targets[i] : _.result(this, targets[i]));
 
 		}
+
+		tween_object.play = function(next, options) {
+
+			if (!options) options = {};
+
+			options.tweenObject = tween_object;
+
+			_this.stopTween(tween_object);
+
+			_this.tween(tween_object.props, tween_object.targets, next, options);
+
+		};
 
 		return tween_object;
 
 	},
 
-	_tween: function (target, tween_object, additional_delay, options) {
+	_tween: function (target, tween_object, options) {
 
 		var tween_props = tween_object.props;
 
 		this._tweenSet(tween_props.set, target);
 
-		if (!tween_props.to) return;
+		if (!tween_props.to) this._tweenEnd(tween_object);
 
-		if (!_.isArray(tween_props.to[0])) tween_props.to = [tween_props.to];
+		else {
 
-		_.each(tween_props.to, function (to_object) {
+			if (!_.isArray(tween_props.to[0])) tween_props.to = [tween_props.to];
 
-			var tween_vars = {};
+			_.each(tween_props.to, function (to_object) {
 
-			if (_.contains(['position', 'scale', 'anchor', 'skew'], to_object[0])) {
+				var tween_vars = {};
 
-				if (!target[to_object[0]]) throw new Error('The are no property "'+to_object[0]+'" in tween target.');
+				if (_.contains(['position', 'scale', 'anchor', 'skew'], to_object[0])) {
 
-				if (!_.isArray(to_object[1])) to_object[1] = [to_object[1], to_object[1]];
+					if (!target[to_object[0]]) throw new Error('The are no property "'+to_object[0]+'" in tween target.');
 
-				if (to_object[1][0] || to_object[1][0] === 0) tween_vars.x = this.calculate(to_object[1][0]);
-				if (to_object[1][1] || to_object[1][1] === 0) tween_vars.y = this.calculate(to_object[1][1]);
+					if (!_.isArray(to_object[1])) to_object[1] = [to_object[1], to_object[1]];
 
-				this._tweenProperty(tween_object, target[to_object[0]], tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear, options);
+					if (to_object[1][0] || to_object[1][0] === 0) tween_vars.x = this.calculate(to_object[1][0]);
+					if (to_object[1][1] || to_object[1][1] === 0) tween_vars.y = this.calculate(to_object[1][1]);
 
-				if (!options.dontChangeChildParams) target._child_params[to_object[0]] = to_object[1];
+					this._tweenProperty(tween_object, target[to_object[0]], tween_vars, to_object[2], (to_object[3] || 0), to_object[4] || createjs.Ease.linear, options);
 
-			} else if (to_object[0] in target) {
+					if (!options.dontChangeChildParams) target._child_params[to_object[0]] = to_object[1];
 
-				tween_vars[to_object[0]] = to_object[1];
+				} else if (to_object[0] in target) {
 
-				this._tweenProperty(tween_object, target, tween_vars, to_object[2], (to_object[3] || 0) + (additional_delay || 0), to_object[4] || createjs.Ease.linear, options);
+					tween_vars[to_object[0]] = to_object[1];
 
-			}
+					this._tweenProperty(tween_object, target, tween_vars, to_object[2], (to_object[3] || 0), to_object[4] || createjs.Ease.linear, options);
 
-		}, this);
+				}
+
+			}, this);
+
+		}
 
 	},
 
@@ -1032,21 +1176,44 @@ var Screen = new Class({
 
 		if (is_completed) {
 
-			if (tween_object.props.next) {
+			var _this = this;
 
-				this.tween(tween_object.props.next, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
+			var _end = function() {
 
-			} else if (tween_object.startingProps.loop) {
+				if (tween_object.props.next) {
 
-				this.tween(tween_object.startingProps, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
+					_this.tween(tween_object.props.next, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
 
-			} else {
+				} else if (tween_object.startingProps.loop) {
 
-				if (tween_object.next) tween_object.next.apply(this, [tween_object]);
+					var loop = tween_object.startingProps.loop,
+						loops_count = tween_object.startingProps._loopsCount || 0;
+
+					if (_.isFunction(tween_object.startingProps.loop)) loop = loop.apply(_this, [tween_object]);
+
+					if (loop && (!_.isNumber(loop) || loops_count <= loop)) {
+
+						tween_object.startingProps._loopsCount = loops_count + 1;
+
+						_this.tween(tween_object.startingProps, tween_object.targets, tween_object.next, _.extend(tween_object.options, {tweenObject: tween_object}));
+
+					}
+
+					else if (tween_object.next) tween_object.next.apply(_this, [tween_object]);
+
+				} else {
+
+					if (tween_object.next) tween_object.next.apply(_this, [tween_object]);
 
 				}
 
-			}
+			};
+
+			if (tween_object.props.delay) tween_object.timeouts.push(setTimeout(_end, tween_object.props.delay));
+
+			else _end();
+
+		}
 
 	},
 
@@ -1054,15 +1221,20 @@ var Screen = new Class({
 
 		if (tween_object) {
 
-			var tweens = tween_object.tweens;
+			_.each(tween_object.tweens, function(tween) {
 
-			for (var i = 0, l = tweens.length; i < l; i++) {
+				createjs.Tween._tweens = _.without(createjs.Tween._tweens, tween);
 
-				createjs.Tween._tweens = _.without(createjs.Tween._tweens, tweens[i]);
+			});
 
-				createjs.Tween.tweens = _.without(createjs.Tween.tweens, tweens[i]);
+			_.each(tween_object.timeouts, function(timeout) {
 
-			}
+				clearTimeout(timeout);
+
+			});
+
+			tween_object.tweens = [];
+			tween_object.timeouts = [];
 
 		}
 

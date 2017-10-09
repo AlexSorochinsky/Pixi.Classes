@@ -16,8 +16,16 @@ var Game = new Class({
 
 	IsTouchDevice: (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)),
 
+	IsCreateGame: true,
+
 	ResolutionWidth: 1920, //Resolution of game assets (psd file resolution)
 	ResolutionHeight: 1080, //Resolution of game assets (psd file resolution)
+
+	ForceCanvasRenderer: false,
+	ClearBeforeRender: false,
+	Antialias: false,
+	RoundPixels: false,
+	MoveWhenInside: false,
 
 	StageBackgroundColor: 0x000000,
 
@@ -42,30 +50,32 @@ var Game = new Class({
 
 		createjs.Ticker.timingMode = createjs.Ticker.RAF;
 
-		if (this.ForceCanvasRenderer) {
+		if (this.IsCreateGame) {
 
-			this.Renderer = new PIXI.CanvasRenderer(300, 300, {
-				clearBeforeRender: true,
+			var options = {
+				clearBeforeRender: this.ClearBeforeRender,
+				antialias: this.Antialias,
+				roundPixels: this.RoundPixels,
 				transparent: (this.StageBackgroundColor === false),
 				backgroundColor: this.StageBackgroundColor
-			});
+			};
 
-		} else {
+			if (this.ForceCanvasRenderer) this.Renderer = new PIXI.CanvasRenderer(300, 300, options);
 
-			this.Renderer = PIXI.autoDetectRenderer(300, 300, {
-				clearBeforeRender: true,
-				transparent: (this.StageBackgroundColor === false),
-				backgroundColor: this.StageBackgroundColor
-			});
+			else this.Renderer = PIXI.autoDetectRenderer(300, 300, options);
+
+			this.Renderer.plugins.interaction.moveWhenInside = this.MoveWhenInside;
+
+			this.Stage = new PIXI.Container();
+
+			this.Stage.interactive = true;
+			this.Stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
+
+			this.createEmptyTexture();
+
+			this.addRendererEvents();
 
 		}
-
-		this.Renderer.plugins.interaction.moveWhenInside = true;
-
-		this.Stage = new PIXI.Container();
-
-		this.Stage.interactive = true;
-		this.Stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
 
 		this.resources = {};
 
@@ -78,10 +88,6 @@ var Game = new Class({
 			App.create();
 
 		}, {strategy: 'preload'});
-
-		this.createEmptyTexture();
-
-		this.addRendererEvents();
 
 	},
 
@@ -97,15 +103,8 @@ var Game = new Class({
 			textsReady: false
 		};
 
-		var pixi_loader = loader.pixiLoader = new PIXI.loaders.Loader();
-
-		pixi_loader.on("progress", function() {
-
-			Broadcast.call('Game Load Progress', [loader, assets]);
-
-		});
-
-		var fonts = [],
+		var pixi_assets = [],
+			fonts = [],
 			sounds = [],
 			images = [],
 			texts = [];
@@ -120,11 +119,11 @@ var Game = new Class({
 
 					if (assets && !_.contains(assets, name)) return;
 
-					if (App.Assets[name] && App.Assets[name].state != 'prepared') {
+					if (App.Assets[name] && App.Assets[name].state !== 'prepared') {
 
-						if (App.Assets[name].state == 'loaded') console.warn('Asset already loaded. Check "'+name+'" asset for multiple load.');
+						if (App.Assets[name].state === 'loaded') console.warn('Asset already loaded. Check "'+name+'" asset for multiple load.');
 
-						else if (App.Assets[name].state == 'loading') console.warn('Asset already loading. Check "'+name+'" asset for multiple load.');
+						else if (App.Assets[name].state === 'loading') console.warn('Asset already loading. Check "'+name+'" asset for multiple load.');
 
 						else throw new Error('Asset names in all screens must be unique. Check "'+name+'" asset definition in "'+screen.Name+'" screen.');
 
@@ -137,7 +136,7 @@ var Game = new Class({
 
 					if (!asset.loadStrategy) asset.loadStrategy = 'preload';
 
-					if (options.strategy == 'preload' && asset.loadStrategy != 'preload') return;
+					if (options.strategy === 'preload' && asset.loadStrategy !== 'preload') return;
 
 					var url = asset.url;
 
@@ -145,19 +144,19 @@ var Game = new Class({
 
 					if (url.indexOf('http') !== 0) url = App.srcURL + url + '?v=' + this.Version;
 
-					if (asset.type == 'image') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
+					if (asset.type === 'image') pixi_assets.push([asset.name, url]);
 
-					else if (asset.type == 'atlas') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
+					else if (asset.type === 'atlas') pixi_assets.push([asset.name, url]);
 
-					else if (asset.type == 'bitmap-font') pixi_loader.add(asset.name, url, { crossOrigin: "*" });
+					else if (asset.type === 'bitmap-font') pixi_assets.push([asset.name, url]);
 
-					else if (asset.type == 'web-font') fonts.push([asset.name, url]);
+					else if (asset.type === 'web-font') fonts.push([asset.name, url]);
 
-					else if (asset.type == 'sound') sounds.push([asset.name, url]);
+					else if (asset.type === 'sound') sounds.push([asset.name, url]);
 
-					else if (asset.type == 'dom-image') images.push([asset.name, url]);
+					else if (asset.type === 'dom-image') images.push([asset.name, url]);
 
-					else if (asset.type == 'text') texts.push([asset.name, url]);
+					else if (asset.type === 'text') texts.push([asset.name, url]);
 
 					asset.state = 'loading';
 
@@ -167,7 +166,23 @@ var Game = new Class({
 
 		}, this);
 
-		if (_.size(pixi_loader.resources) > 0) {
+		if (pixi_assets.length > 0) {
+
+			if (!window.PIXI) throw new Error('PIXI not found.');
+
+			var pixi_loader = loader.pixiLoader = new PIXI.loaders.Loader();
+
+			pixi_loader.on("progress", function() {
+
+				Broadcast.call('Game Load Progress', [loader, assets]);
+
+			});
+
+			_.each(pixi_assets, function(pixi_asset) {
+
+				pixi_loader.add(pixi_asset[0], pixi_asset[1], {crossOrigin: "*"})
+
+			});
 
 			pixi_loader.load(_.bind(function (pixi_loader, resources) {
 
@@ -223,9 +238,24 @@ var Game = new Class({
 					});
 
 					loader.webFontsReady = true;
+
 					check_complete();
 
-				}
+				},
+				inactive: function () {
+
+					_.each(fonts, function (font) {
+
+						App.Assets[font[0]].loaded = true;
+
+					});
+
+					loader.webFontsReady = true;
+
+					check_complete();
+
+				},
+				timeout: 5000
 			};
 
 			if (window.WebFont) window.WebFont.load();
@@ -309,7 +339,7 @@ var Game = new Class({
 
 				xhr.onreadystatechange = function () {
 
-					if (xhr.readyState == 4 && xhr.status == 200) {
+					if (xhr.readyState === 4 && xhr.status === 200) {
 
 						App.Assets[data[0]].data = xhr.responseText;
 						App.Assets[data[0]].loaded = true;
@@ -373,7 +403,7 @@ var Game = new Class({
 
 		});
 
-		document.body.appendChild(this.Renderer.view);
+		if (this.Renderer) document.body.appendChild(this.Renderer.view);
 
 		this.resize(true);
 
@@ -391,7 +421,7 @@ var Game = new Class({
 
 		Broadcast.call("Game Update");
 
-		this.Renderer.render(this.Stage);
+		if (this.Renderer) this.Renderer.render(this.Stage);
 
 	},
 
@@ -403,34 +433,46 @@ var Game = new Class({
 
 	},
 
-	//Draw all containers first time, so all textures will be cached in memory and animation will be more smooth
+	//Draw all textures first time, so all textures will be cached in memory and animation will be more smooth
 	cacheScreenTextures: function() {
 
+		var container = new PIXI.Container();
+
+		container.cached_textures_hash = {};
+
+		_.each(PIXI.utils.TextureCache, function(texture, name) {
+
+			if (!container.cached_textures_hash[name]) {
+
+				var sprite = container.cached_textures_hash[name] = new PIXI.Sprite(texture);
+
+				sprite.alpha = 0.001;
+
+				container.addChild(sprite);
+
+			}
+
+		});
+
 		_.each(this.Screens, function (screen) {
 
-			_.each(screen._containers, function(container) {
+			_.each(screen.Assets, function(asset) {
 
-				container._prev_visible = container.visible;
+				if (asset.type === 'web-font' && !container.cached_textures_hash['web-font-' + asset.name]) {
 
-				container.visible = true;
+					var sprite = container.cached_textures_hash['web-font-' + asset.name] = new PIXI.Text('test 123', {fontFamily: asset.name, fontSize: '50px', fill: 0xff0000});
+
+					sprite.alpha = 0.001;
+
+					container.addChild(sprite);
+
+				}
 
 			}, this);
 
 		}, this);
 
-		this.Renderer.render(this.Stage);
-
-		_.each(this.Screens, function (screen) {
-
-			_.each(screen._containers, function(container) {
-
-				container.visible = container._prev_visible;
-
-				delete container._prev_visible;
-
-			}, this);
-
-		}, this);
+		this.Renderer.render(container);
 
 	},
 
@@ -443,6 +485,8 @@ var Game = new Class({
 
 		this.IsPortrait = !this.IsLandscape;
 
+		this.Orientation = this.IsLandscape ? 'Landscape' : 'Portrait';
+
 		this.Width = width * this.PixelRatio;
 		this.Height = height * this.PixelRatio;
 
@@ -453,10 +497,10 @@ var Game = new Class({
 
 		Broadcast.call("Game Resize", [is_initial_resize]);
 
-		this.Renderer.resize(this.Width, this.Height);
+		if (this.Renderer) this.Renderer.resize(this.Width, this.Height);
 
-		this.Renderer.view.style.width = width + 'px';
-		this.Renderer.view.style.height = height + 'px';
+		if (this.Renderer) this.Renderer.view.style.width = width + 'px';
+		if (this.Renderer) this.Renderer.view.style.height = height + 'px';
 
 	},
 

@@ -44,31 +44,35 @@ var Loader = {
 
 			s.innerHTML = event.target.responseText; // or: s[s.innerText!=undefined?"innerText":"textContent"] = e.responseText
 
-			document.body.appendChild(s);
+			document.getElementsByTagName('head')[0].appendChild(s);
 
-			Broadcast.on("Assets Preload Progress", function(loader) {
+			setTimeout(function() {
 
-				Loader.updateLoadProgress(Loader.loadingProgressCodePercent + (loader.pixiLoader.progress / 100) || 0);
+				Broadcast.on("Assets Preload Progress", function(loader) {
 
-			}, this);
+					Loader.updateLoadProgress(Loader.loadingProgressCodePercent + (loader.pixiLoader.progress / 100) || 0);
 
-			Broadcast.on("Assets Preload Complete", function() {
+				}, this);
 
-				Loader.updateLoadProgress(1);
+				Broadcast.on("Assets Preload Complete", function() {
 
-				Loader.loadOverlayEl.style.opacity = 1;
+					Loader.updateLoadProgress(1);
 
-				Broadcast.off(["Assets Preload Progress", "Assets Preload Complete"], this);
+					Loader.loadOverlayEl.style.opacity = 1;
 
-				setTimeout(function() {
+					Broadcast.off(["Assets Preload Progress", "Assets Preload Complete"], this);
 
-					Loader.loadOverlayEl.style.display = 'none';
+					setTimeout(function() {
 
-				}, 1000);
+						Loader.loadOverlayEl.style.display = 'none';
 
-			}, this);
+					}, 1000);
 
-			if (next) next();
+				}, this);
+
+				if (next) next();
+
+			}, 100);
 
 		}, false);
 
@@ -86,11 +90,11 @@ var Loader = {
 		container.style.height = window.innerHeight + 'px';
 		container.style.lineHeight = window.innerHeight + 'px';
 
-		var indicator = document.createElement('div');
+		var indicator = this.indicatorEl = document.createElement('div');
 		indicator.className = 'indicator';
 		container.appendChild(indicator);
 
-		var text = document.createElement('div');
+		var text = this.logoEl = document.createElement('div');
 		text.className = 'text';
 		text.innerText = 'Loading...';
 		indicator.appendChild(text);
@@ -205,6 +209,7 @@ var Loader = {
 				"background-color: rgba(0, 0, 0, 0.3);" +
 				"vertical-align: middle;" +
 				"position: relative;" +
+				"opacity: 0.5;" +
 			"}" +
 			".mraid-loading .complete {" +
 				"display: inline-block;" +
@@ -217,6 +222,7 @@ var Loader = {
 				"left: 0;" +
 				"top: 0;" +
 				"transition: width 1s;" +
+				"opacity: 0.9;" +
 			"}"
 
 		));

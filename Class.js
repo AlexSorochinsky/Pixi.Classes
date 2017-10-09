@@ -14,13 +14,13 @@ var Class = function(props_1) {
 
 		var instance = this;
 
-		for (var i in props_1) if (props_1.hasOwnProperty(i) && i != 'initialize') {
+		for (var i in props_1) if (props_1.hasOwnProperty(i) && i !== 'initialize') {
 
 			instance[i] = props_1[i];
 
 		}
 
-		for (i in props_2) if (props_2.hasOwnProperty(i) && i != 'initialize') {
+		for (i in props_2) if (props_2.hasOwnProperty(i) && i !== 'initialize') {
 
 			instance[i] = props_2[i];
 
@@ -28,7 +28,7 @@ var Class = function(props_1) {
 
 		_.each(cl._mixins, function(props) {
 
-			for (var i in props) if (props.hasOwnProperty(i) && i != 'initialize') {
+			for (var i in props) if (props.hasOwnProperty(i) && i !== 'initialize') {
 
 				instance[i] = props[i];
 
@@ -55,5 +55,7 @@ Class.Mixin = function(target, properties) {
 	if (!target._mixins) target._mixins = [];
 
 	target._mixins.push(properties);
+
+	return properties;
 
 };

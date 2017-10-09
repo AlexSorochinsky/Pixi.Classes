@@ -14,9 +14,21 @@ var Service = new Class({
 
 		if (!this.Actions) this.Actions = {};
 
-	Broadcast.on('Server Data Received', function(data) {
+		Broadcast.on('Server Data Received', function(data) {
 
-		this.checkAction(data);
+			this.checkAction(data);
+
+		}, this);
+
+		if (!this.Events) this.Events = {};
+
+		_.each(this.Events, function(fn, key) {
+
+			Broadcast.on(key, function() {
+
+				fn.apply(this, arguments);
+
+			}, this);
 
 		}, this);
 
@@ -26,7 +38,7 @@ var Service = new Class({
 
 		_.each(this.Actions, function(fn, key) {
 
-			if (key in data) fn.apply(this, [data[key], data]);
+			if (data && key in data) fn.apply(this, [data[key], data]);
 
 		}, this);
 
