@@ -10,8 +10,6 @@
 
 var Game = new Class({
 
-	Version: '1.0.0',
-
 	PixelRatio: window.devicePixelRatio || 1,
 
 	IsTouchDevice: (('ontouchstart' in window) || (navigator.MaxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0)),
@@ -21,11 +19,12 @@ var Game = new Class({
 	ResolutionWidth: 1920, //Resolution of game assets (psd file resolution)
 	ResolutionHeight: 1080, //Resolution of game assets (psd file resolution)
 
+	MaximumCanvasSize: 2048 * 2048,
+
 	ForceCanvasRenderer: false,
 	ClearBeforeRender: false,
 	Antialias: false,
 	RoundPixels: false,
-	MoveWhenInside: false,
 
 	StageBackgroundColor: 0x000000,
 
@@ -48,46 +47,7 @@ var Game = new Class({
 
 	start: function () {
 
-		createjs.Ticker.timingMode = createjs.Ticker.RAF;
-
-		if (this.IsCreateGame) {
-
-			var options = {
-				clearBeforeRender: this.ClearBeforeRender,
-				antialias: this.Antialias,
-				roundPixels: this.RoundPixels,
-				transparent: (this.StageBackgroundColor === false),
-				backgroundColor: this.StageBackgroundColor
-			};
-
-			if (this.ForceCanvasRenderer) this.Renderer = new PIXI.CanvasRenderer(300, 300, options);
-
-			else this.Renderer = PIXI.autoDetectRenderer(300, 300, options);
-
-			this.Renderer.plugins.interaction.moveWhenInside = this.MoveWhenInside;
-
-			this.Stage = new PIXI.Container();
-
-			this.Stage.interactive = true;
-			this.Stage.hitArea = new PIXI.Rectangle(0, 0, 10000, 10000);
-
-			this.createEmptyTexture();
-
-			this.addRendererEvents();
-
-		}
-
-		this.resources = {};
-
-		if (this.prepare) this.prepare();
-
-		this.loadAssets(null, function() {
-
-			Broadcast.call("Assets Loaded");
-
-			App.create();
-
-		}, {strategy: 'preload'});
+		throw new Error('App.start must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
 	},
 
@@ -95,164 +55,193 @@ var Game = new Class({
 
 		if (!options) options = {};
 
+		var _this = this;
+
 		var loader = {
-			pixiReady: false,
-			domImagesReady: false,
-			webFontsReady: false,
-			soundsReady: false,
-			textsReady: false
-		};
+			sources: {},
+			states: {},
+			check: function check_complete() {
 
-		var pixi_assets = [],
-			fonts = [],
-			sounds = [],
-			images = [],
-			texts = [];
+				var result = true;
 
-		_.each(this.Screens, function (screen) {
+				_this.each(loader.states, function(m) {if (m !== 'ready') result = false;});
 
-			if (screen.Assets) {
+				if (result) {
 
-				_.each(screen.Assets, function (asset) {
+					if (next) {
 
-					var name = asset.name;
+						Broadcast.call("Assets Preload Complete", [loader, assets]);
 
-					if (assets && !_.contains(assets, name)) return;
+						next.call(this);
 
-					if (App.Assets[name] && App.Assets[name].state !== 'prepared') {
-
-						if (App.Assets[name].state === 'loaded') console.warn('Asset already loaded. Check "'+name+'" asset for multiple load.');
-
-						else if (App.Assets[name].state === 'loading') console.warn('Asset already loading. Check "'+name+'" asset for multiple load.');
-
-						else throw new Error('Asset names in all screens must be unique. Check "'+name+'" asset definition in "'+screen.Name+'" screen.');
-
-					} else if (!App.Assets[name]) {
-
-						asset.state = 'prepared';
-						App.Assets[name] = asset;
+						next = null;
 
 					}
 
-					if (!asset.loadStrategy) asset.loadStrategy = 'preload';
+				}
 
-					if (options.strategy === 'preload' && asset.loadStrategy !== 'preload') return;
+			}
+		};
 
-					var url = asset.url;
+		this.extractAssetsForLoad(loader, this.Screens, assets, next, options);
 
-					if (_.isFunction(url)) url = url.call(App);
+		this.loadImages(loader, loader.sources['image']);
 
-					if (url.indexOf('http') !== 0) url = App.srcURL + url + '?v=' + this.Version;
+		this.loadAtlases(loader, loader.sources['atlas']);
 
-					if (asset.type === 'image') pixi_assets.push([asset.name, url]);
+		this.loadBitmapFonts(loader, loader.sources['bitmap-font']);
 
-					else if (asset.type === 'atlas') pixi_assets.push([asset.name, url]);
+		this.loadWebFonts(loader, loader.sources['web-font']);
 
-					else if (asset.type === 'bitmap-font') pixi_assets.push([asset.name, url]);
+		this.loadSounds(loader, loader.sources['sound']);
 
-					else if (asset.type === 'web-font') fonts.push([asset.name, url]);
+		this.loadDOMImages(loader, loader.sources['dom-image']);
 
-					else if (asset.type === 'sound') sounds.push([asset.name, url]);
+		this.loadTexts(loader, loader.sources['text']);
 
-					else if (asset.type === 'dom-image') images.push([asset.name, url]);
+		this.loadSources(loader);
 
-					else if (asset.type === 'text') texts.push([asset.name, url]);
+		return loader;
+
+	},
+
+	extractAssetsForLoad: function(loader, screens, assets, next, options) {
+
+		this.each(screens, function (screen) {
+
+			this.each(screen.Assets, function (asset) {
+
+				var name = asset.name;
+
+				if (assets && !this.contains(assets, name)) return;
+
+				if (App.Assets[name] && App.Assets[name].state !== 'prepared') {
+
+					if (App.Assets[name].state === 'loaded') console.warn('Asset already loaded. Check "'+name+'" asset for multiple load.');
+
+					else if (App.Assets[name].state === 'loading') console.warn('Asset already loading. Check "'+name+'" asset for multiple load.');
+
+					else throw new Error('Asset names in all screens must be unique. Check "'+name+'" asset definition in "'+screen.Name+'" screen.');
+
+				} else if (!App.Assets[name]) {
+
+					App.Assets[name] = asset;
+
+					asset.state = 'prepared';
+
+				}
+
+				if (!asset.loadStrategy) asset.loadStrategy = 'preload';
+
+				if (options.strategy === 'preload' && asset.loadStrategy !== 'preload') return;
+
+				var url = asset.url;
+
+				//Allow disable assets on removing url
+				if (url) {
+
+					if (typeof url === 'function') url = url.call(App);
+
+					if (url.indexOf('http') !== 0) url = App.srcURL + url;
+
+					if (!loader.states[asset.type]) {
+
+						loader.states[asset.type] = 'initialized';
+
+						loader.sources[asset.type] = [];
+
+					}
+
+					loader.sources[asset.type].push([asset.name, url]);
 
 					asset.state = 'loading';
 
-				}, this);
-
-			}
-
-		}, this);
-
-		if (pixi_assets.length > 0) {
-
-			if (!window.PIXI) throw new Error('PIXI not found.');
-
-			var pixi_loader = loader.pixiLoader = new PIXI.loaders.Loader();
-
-			pixi_loader.on("progress", function() {
-
-				Broadcast.call('Game Load Progress', [loader, assets]);
+				}
 
 			});
 
-			_.each(pixi_assets, function(pixi_asset) {
+		});
 
-				pixi_loader.add(pixi_asset[0], pixi_asset[1], {crossOrigin: "*"})
+	},
 
-			});
+	loadImages: function() {
 
-			pixi_loader.load(_.bind(function (pixi_loader, resources) {
+		throw new Error('App.loadImages must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
-				App.resources = resources;
+	},
 
-				_.each(resources, function(item, index) {
+	loadAtlases: function() {
 
-					if (App.Assets[index]) {
+		throw new Error('App.loadAtlases must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
-						App.Assets[index].data = item;
-						App.Assets[index].loaded = true;
+	},
 
-					} else {
+	loadBitmapFonts: function() {
 
-						App.Assets[index] = {
-							data: item,
-							loaded: true
-						};
+		throw new Error('App.loadBitmapFonts must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
-					}
+	},
 
-				});
+	loadWebFonts: function(loader, fonts) {
 
-				loader.pixiReady = true;
-				check_complete();
+		if (fonts && fonts.length > 0) {
 
-			}, this));
-
-		} else {
-
-			loader.pixiReady = true;
-			check_complete();
-
-		}
-
-		if (fonts.length > 0) {
+			var _this = this;
 
 			window.WebFontConfig = {
 				custom: {
-					families: _.map(fonts, function (font) {
+					families: fonts.map(function (font) {
 						return font[0];
 					}),
-					urls: _.map(fonts, function (font) {
+					urls: fonts.map(function (font) {
 						return font[1];
 					})
 				},
 				active: function () {
 
-					_.each(fonts, function(font) {
+					_this.each(fonts, function(font) {
 
 						App.Assets[font[0]].loaded = true;
 
 					});
 
-					loader.webFontsReady = true;
+					loader.states['web-font'] = 'ready';
 
-					check_complete();
+					loader.check();
 
 				},
 				inactive: function () {
 
-					_.each(fonts, function (font) {
+					_this.each(fonts, function (font) {
 
 						App.Assets[font[0]].loaded = true;
 
 					});
 
-					loader.webFontsReady = true;
+					loader.states['web-font'] = 'ready';
 
-					check_complete();
+					loader.check();
+
+				},
+				fontactive: function(name) {
+
+					var el = document.createElement('div');
+
+					el.id = name;
+
+					el.style.fontFamily = name;
+					el.style.position = 'fixed';
+					el.style.top = 0;
+					el.style.visibility = 'hidden';
+
+					el.innerHTML = 'AbCdE 12345';
+
+					document.body.appendChild(el);
+
+				},
+				fontinactive: function(familyName, fvd) {
+
+					console.warn("failed " +familyName + " " + fvd);
 
 				},
 				timeout: 5000
@@ -273,40 +262,25 @@ var Game = new Class({
 
 		} else {
 
-			loader.webFontsReady = true;
-			check_complete();
+			loader.states['font'] = 'ready';
+
+			loader.check();
 
 		}
 
-		if (sounds.length > 0) {
+	},
 
-			if (!createjs.Sound) throw new Error('SoundJS not found.');
+	loadSounds: function() {
 
-			for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
+		throw new Error('App.loadSounds must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
-			createjs.Sound.on("fileload", function(event) {
+	},
 
-				Broadcast.call("Sound Loaded", [event.id]);
+	loadDOMImages: function(loader, dom_images) {
 
-				//TODO: Check sounds loading process
-				App.Assets[event.id].loaded = true;
+		if (dom_images && dom_images.length > 0) {
 
-				//TODO: Wait all sounds before load complete callback
-				loader.soundsReady = true;
-				check_complete();
-
-			}, this);
-
-		} else {
-
-			loader.soundsReady = true;
-			check_complete();
-
-		}
-
-		if (images.length > 0) {
-
-			_.each(images, function(data) {
+			this.each(dom_images, function(data) {
 
 				var img = new Image();
 				img.src = data[1];
@@ -317,19 +291,28 @@ var Game = new Class({
 			});
 
 			//TODO: Wait dom images before load complete callback (test if image already loaded in css, load event will not work)
-			loader.domImagesReady = true;
-			check_complete();
+
+			loader.states['dom-image'] = 'ready';
+
+			loader.check();
 
 		} else {
 
-			loader.domImagesReady = true;
-			check_complete();
+			loader.states['dom-image'] = 'ready';
+
+			loader.check();
 
 		}
 
-		if (texts.length > 0) {
+	},
 
-			_.each(texts, function(data) {
+	loadTexts: function(loader, texts) {
+
+		if (texts && texts.length > 0) {
+
+			var _this = this;
+
+			this.each(texts, function(data) {
 
 				var xhr = new XMLHttpRequest();
 
@@ -344,15 +327,15 @@ var Game = new Class({
 						App.Assets[data[0]].data = xhr.responseText;
 						App.Assets[data[0]].loaded = true;
 
-						loader.textsReady = true;
+						loader.states['text'] = 'ready';
 
-						_.each(texts, function(data) {
+						_this.each(texts, function(data) {
 
-							if (!App.Assets[data[0]] || !App.Assets[data[0]].loaded) loader.textsReady = false;
+							if (!App.Assets[data[0]] || !App.Assets[data[0]].loaded) loader.states['text'] = 'loading';
 
 						});
 
-						check_complete();
+						loader.check();
 
 					}
 
@@ -362,66 +345,23 @@ var Game = new Class({
 
 		} else {
 
-			loader.textsReady = true;
-			check_complete();
+			loader.states['text'] = 'ready';
+
+			loader.check();
 
 		}
 
-		function check_complete() {
+	},
 
-			if (loader.pixiReady && loader.webFontsReady && loader.soundsReady && loader.domImagesReady && loader.textsReady) {
+	loadSources: function() {
 
-				if (next) {
-
-					next.call(this);
-
-					next = null;
-
-				}
-
-			}
-
-		}
+		//Just for redeclare in App.js for loading unknown type of assets
 
 	},
 
 	create: function () {
 
-		this.time = Date.now();
-
-		var game = this;
-
-		_.each(this.Screens, function (screen) {
-
-			screen.build();
-
-		}, this);
-
-		window.addEventListener('resize', function () {
-
-			game.resize(false);
-
-		});
-
-		if (this.Renderer) document.body.appendChild(this.Renderer.view);
-
-		this.resize(true);
-
-		this.isReady = true;
-
-		this.ready();
-
-		createjs.Ticker.addEventListener("tick", _.bind(this.update, this));
-
-	},
-
-	update: function () {
-
-		this.time = Date.now();
-
-		Broadcast.call("Game Update");
-
-		if (this.Renderer) this.Renderer.render(this.Stage);
+		throw new Error('App.create must be redefined. Include Game.Phaser.js or Game.Pixi.js');
 
 	},
 
@@ -433,161 +373,33 @@ var Game = new Class({
 
 	},
 
-	//Draw all textures first time, so all textures will be cached in memory and animation will be more smooth
-	cacheScreenTextures: function() {
+	each: function(obj, fn) {
 
-		var container = new PIXI.Container();
+		for (var i in obj) if (obj.hasOwnProperty(i)) {
 
-		container.cached_textures_hash = {};
+			fn.call(this, obj[i], i);
 
-		_.each(PIXI.utils.TextureCache, function(texture, name) {
+		}
 
-			if (!container.cached_textures_hash[name]) {
+	},
 
-				var sprite = container.cached_textures_hash[name] = new PIXI.Sprite(texture);
+	contains: function(array, obj) {
 
-				sprite.alpha = 0.001;
+		if (!array) return false;
 
-				container.addChild(sprite);
+		var i = array.length;
+
+		while (i--) {
+
+			if (array[i] === obj) {
+
+				return true;
 
 			}
-
-		});
-
-		_.each(this.Screens, function (screen) {
-
-			_.each(screen.Assets, function(asset) {
-
-				if (asset.type === 'web-font' && !container.cached_textures_hash['web-font-' + asset.name]) {
-
-					var sprite = container.cached_textures_hash['web-font-' + asset.name] = new PIXI.Text('test 123', {fontFamily: asset.name, fontSize: '50px', fill: 0xff0000});
-
-					sprite.alpha = 0.001;
-
-					container.addChild(sprite);
-
-				}
-
-			}, this);
-
-		}, this);
-
-		this.Renderer.render(container);
-
-	},
-
-	resize: function (is_initial_resize) {
-
-		var width = window.innerWidth,
-			height = window.innerHeight;
-
-		this.IsLandscape = width > height;
-
-		this.IsPortrait = !this.IsLandscape;
-
-		this.Orientation = this.IsLandscape ? 'Landscape' : 'Portrait';
-
-		this.Width = width * this.PixelRatio;
-		this.Height = height * this.PixelRatio;
-
-		this.CenterX = Math.round(this.Width / 2);
-		this.CenterY = Math.round(this.Height / 2);
-
-		this.Scale = Math.min(this.Width / this.ResolutionWidth, this.Height / this.ResolutionHeight);
-
-		Broadcast.call("Game Resize", [is_initial_resize]);
-
-		if (this.Renderer) this.Renderer.resize(this.Width, this.Height);
-
-		if (this.Renderer) this.Renderer.view.style.width = width + 'px';
-		if (this.Renderer) this.Renderer.view.style.height = height + 'px';
-
-	},
-
-	play: function(name, volume, is_loop) {
-
-		if (createjs.Sound.loadComplete(name)) {
-
-			var instance = createjs.Sound.play(name);
-
-			instance._looping = !!is_loop;
-
-			instance.volume = volume || 1;
-
-			instance.on("complete", function() {
-
-				if (instance._looping) {
-
-					instance.position = 0;
-
-					instance.play();
-
-				}
-
-			}, this);
-
-			return instance;
 
 		}
 
 		return false;
-
-	},
-
-	addRendererEvents: function() {
-
-		if (App.IsTouchDevice) {
-
-			this.Stage.on("touchstart", function(e) {
-
-				Broadcast.call("Stage Press Down", [App.Stage, e]);
-
-			}, false);
-
-			this.Stage.on("touchend", function(e) {
-
-				Broadcast.call("Stage Press Up", [App.Stage, e]);
-
-			}, false);
-
-			this.Stage.on("touchmove", function(e) {
-
-				Broadcast.call("Stage Press Move", [App.Stage, e]);
-
-			}, false);
-
-		} else {
-
-			this.Stage.on("mousedown", function(e) {
-
-				Broadcast.call("Stage Press Down", [App.Stage, e]);
-
-			}, false);
-
-			this.Stage.on("mouseup", function(e) {
-
-				Broadcast.call("Stage Press Up", [App.Stage, e]);
-
-			}, false);
-
-			this.Stage.on("mousemove", function(e) {
-
-				Broadcast.call("Stage Press Move", [App.Stage, e]);
-
-			}, false);
-
-		}
-
-	},
-
-	createEmptyTexture: function() {
-
-		var canvas = document.createElement('canvas');
-
-		canvas.width = 1;
-		canvas.height = 1;
-
-		this.emptyTexture = PIXI.Texture.fromCanvas(canvas);
 
 	}
 

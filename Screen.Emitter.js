@@ -14,7 +14,7 @@ Class.Mixin(Screen, {
 
 		Broadcast.on(this.Name + ' build child', function(child, child_params) {
 
-			if (child_params.type == 'emitter') this.buildChildEmitter(child);
+			if (child_params.type === 'emitter') this.buildChildEmitter(child);
 
 		}, this, {index: this.Name + '-Emitter'});
 
@@ -24,147 +24,211 @@ Class.Mixin(Screen, {
 
 		}, this, {index: this.Name + '-Emitter'});
 
-		this._emitters = [];
+		this.emitters = [];
+
+		this.particlesLimitScale = 1;
+		this.particlesWaveIntervalScale = 1;
+		this.particlesWaveTicksScale = 1;
+		this.particlesWaveCountScale = 1;
+
+		this.optimizeWaveIntervalTo60FPS = true;
 
 	},
 
-	buildChildEmitter: function(child) {
+	buildChildEmitter: function(emitter) {
 
-		child.emit = _.bind(function() {
+		var child_params = emitter.params;
 
-			child.isPaused = false;
+		emitter.particlesCount = 0;
+		emitter.particlesLimit = (('limit' in child_params) ? (child_params.limit || Infinity) : 20) * this.particlesLimitScale;
 
-			this.emit(child);
+		emitter.waveInterval = (child_params.interval || 100) * this.particlesWaveIntervalScale;
+		emitter.waveTicks = (('ticks' in child_params) ? (child_params.ticks || 0) : 0) * this.particlesWaveTicksScale;
+		emitter.waveCount = (child_params.count || 2) * this.particlesWaveCountScale;
+		emitter.waveTime = 0;
 
-		}, this);
+		emitter.tick = 0;
 
-		child.pause = _.bind(function() {
+		if (this.optimizeWaveIntervalTo60FPS && emitter.waveInterval && !emitter.waveTicks) emitter.waveTicks = Math.round(emitter.waveInterval / (1000 / 60));
 
-			this.pauseEmitter(child);
+		emitter.images = child_params.images || child_params.image;
+		if (_.isString(emitter.images) && emitter.images.indexOf('#') === 0) emitter.images = this[emitter.images.substr(1)];
+		if (!_.isArray(emitter.images)) emitter.images = [emitter.images];
 
-		}, this);
+		emitter.particlePosition = child_params.particlePosition;
+		emitter.particleSpeed = child_params.particleSpeed;
+		emitter.particleAcceleration = child_params.particleAcceleration;
 
-	},
+		emitter.skipUpdate = !emitter.particleSpeed && !emitter.particleAcceleration;
 
-	emit: function(emitter) {
+		emitter.particleTween = child_params.particleTween;
+		if (_.isString(emitter.particleTween) && emitter.particleTween.indexOf('#') === 0) emitter.particleTween = this[emitter.particleTween.substr(1)];
 
-		var child_params = emitter._child_params;
+		emitter.paused = true;
 
-		var maximum_particles = ('limit' in child_params) ? child_params.limit : 20,
-			interval = child_params.interval || 100,
-			count_per_interval = child_params.count || 2;
+		emitter.emit = this.bind(function() {
 
-		setTimeout(_.bind(function() {
+			emitter.tick = 0;
 
-			if (emitter.isPaused) return;
+			emitter.particlesCount = 0;
 
-			for (var i=0; i<count_per_interval; i++) {
+			this.emitters.push(emitter);
 
-				var images = child_params.images || [child_params.image],
-					start_position = child_params.particlePosition || ['ellipse', 20, 20],
-					particle_scale = child_params.particleScale || [1, 2, 1, 2],
-					particle_rotation = child_params.particleRotation || [0, 0],
-					particle_alpha = child_params.particleAlpha || [1, 1],
-					particle_speed = child_params.particleSpeed || [0, 0],
-					particle_acceleration = child_params.particleAcceleration || [0, 0],
-					particle_tweens = child_params.particleTween;
+			emitter.paused = false;
 
-				var sprite = _.sample(images);
+		});
 
-				if (_.isFunction(sprite)) sprite = sprite.apply(this, [emitter]);
+		emitter.pause = this.bind(function() {
 
-				if (_.isString(sprite)) sprite = this.buildChild(emitter, {type: 'sprite', image: sprite}, true);
+			var emitters = [];
 
-				if (particle_scale.length === 2) particle_scale = [particle_scale[0], particle_scale[1], particle_scale[0], particle_scale[1]];
+			this.each(this.emitters, function(e) {
 
-				var position = [0, 0],
-					scale_x = _.random(particle_scale[0] * 1000, particle_scale[1] * 1000) / 1000,
-					scale_y = _.random(particle_scale[2] * 1000, particle_scale[3] * 1000) / 1000,
-					rotation = _.random(particle_rotation[0] * 1000, particle_rotation[1] * 1000) / 1000,
-					alpha = _.random(particle_alpha[0] * 1000, particle_alpha[1] * 1000) / 1000;
+				if (e !== emitter) emitters.push(e);
 
-				if (_.isFunction(start_position)) position = start_position.apply(this, [sprite]);
+			});
 
-				else if (start_position[0] === 'ellipse') position = this.getPointInsideEllipse(start_position[1], start_position[2]);
+			this.emitters = emitters;
 
-				sprite.position.set(position[0], position[1]);
-				sprite.scale.set(scale_x, scale_y);
-				sprite.rotation = rotation;
-				sprite.alpha = alpha;
+			emitter.paused = true;
 
-				sprite.speedX = this.getParticleValue(particle_speed[0]) || 0;
-				sprite.speedY = this.getParticleValue(particle_speed[1]) || 0;
+		});
 
-				sprite.accelerationX = this.getParticleValue(particle_acceleration[0]) || 0;
-				sprite.accelerationY = this.getParticleValue(particle_acceleration[1]) || 0;
+		emitter.resume = this.bind(function() {
 
-				if (_.isFunction(particle_tweens)) particle_tweens = particle_tweens.apply(this, [sprite]);
+			this.emitters.push(emitter);
 
-				if (_.isObject(particle_tweens) || _.isArray(particle_tweens)) {
+			emitter.paused = false;
 
-					this.tween(particle_tweens, sprite, function(tween_object) {
-
-						tween_object.targets[0].destroy();
-
-					}, {override: false});
-
-				}
-
-				if (maximum_particles !== null) {
-
-					maximum_particles--;
-
-					if (maximum_particles <= 0) break;
-
-				}
-
-			}
-
-			if (maximum_particles === null || maximum_particles > 0) setTimeout(_.bind(arguments.callee, this), interval);
-
-			if (!_.contains(this._emitters, emitter)) this._emitters.push(emitter);
-
-		}, this), interval);
-
-	},
-
-	pauseEmitter: function(emitter) {
-
-		emitter.isPaused = true;
+		});
 
 	},
 
 	updateEmitters: function() {
 
-		_.each(this._emitters, function(container) {
+		this.createEmitterParticles(App.timeDelta);
 
-			if (container.children.length > 0) {
+		this.updateEmitterParticlesPosition(App.timeDelta / 1000);
 
-				_.each(container.children, function(particle) {
+	},
 
-					if (particle.speedX) particle.position.x += particle.speedX * (this.updateTimeOffset / 1000);
-					if (particle.speedY) particle.position.y += particle.speedY * (this.updateTimeOffset / 1000);
+	createEmitterParticles: function() {
 
-					if (particle.accelerationX) particle.speedX += particle.accelerationX * (this.updateTimeOffset / 1000);
-					if (particle.accelerationY) particle.speedY += particle.accelerationY * (this.updateTimeOffset / 1000);
+		this.each(this.emitters, function(emitter) {
 
-				}, this);
+			if (emitter.waveTicks) {
+
+				if ((emitter.tick % emitter.waveTicks === 0) && (emitter.particlesLimit > emitter.particlesCount)) {
+
+					emitter.waveTime = App.time;
+
+					this.emitParticleWave(emitter);
+
+				}
 
 			} else {
 
-				this._emitters = _.without(this._emitters, container);
+				if ((App.time - emitter.waveTime >= emitter.waveInterval) && (emitter.particlesLimit > emitter.particlesCount)) {
+
+					emitter.waveTime = App.time;
+
+					this.emitParticleWave(emitter);
+
+				}
 
 			}
+
+			emitter.tick++;
 
 		}, this);
 
 	},
 
+	updateEmitterParticlesPosition: function(time) {
+
+		this.each(this.emitters, function(emitter) {
+
+			if (!emitter.skipUpdate) this.each(emitter.children, function(particle) {
+
+				if (particle.speedX) particle.position.x += particle.speedX * (time);
+				if (particle.speedY) particle.position.y += particle.speedY * (time);
+
+				if (particle.accelerationX) particle.speedX += particle.accelerationX * (time);
+				if (particle.accelerationY) particle.speedY += particle.accelerationY * (time);
+
+			}, this);
+
+		}, this);
+
+	},
+
+	emitParticleWave: function(emitter) {
+
+		for (var i=0; (i < emitter.waveCount) && (!emitter.paused) && (emitter.particlesLimit > emitter.particlesCount); i++) {
+
+			var sprite = this.sample(emitter.images);
+
+			if (typeof sprite === 'function') sprite = sprite.apply(this, [emitter]);
+
+			if (typeof sprite === 'string') sprite = this.buildChild(emitter, {type: 'sprite', image: sprite}, true);
+
+			if (emitter.particlePosition) {
+
+				var position = [0, 0];
+
+				if (typeof emitter.particlePosition === 'function') position = emitter.particlePosition.apply(this, [sprite]);
+
+				else if (emitter.particlePosition[0] === 'ellipse') position = this.getPointInsideEllipse(emitter.particlePosition[1], emitter.particlePosition[2]);
+
+				else if (emitter.particlePosition[0] === 'rect') position = this.getPointInsideRectangle(emitter.particlePosition[1], emitter.particlePosition[2]);
+
+				else if (emitter.particlePosition.length === 2) position = emitter.particlePosition;
+
+				sprite.position.set(position[0], position[1]);
+
+			}
+
+			if (emitter.particleSpeed) {
+
+				sprite.speedX = this.getParticleValue(emitter.particleSpeed[0]) || 0;
+				sprite.speedY = this.getParticleValue(emitter.particleSpeed[1]) || 0;
+
+			}
+
+			if (emitter.particleAcceleration) {
+
+				sprite.accelerationX = this.getParticleValue(emitter.particleAcceleration[0]) || 0;
+				sprite.accelerationY = this.getParticleValue(emitter.particleAcceleration[1]) || 0;
+
+			}
+
+			var particle_tweens = emitter.particleTween;
+
+			if (typeof particle_tweens === 'function') particle_tweens = particle_tweens.apply(this, [sprite]);
+
+			if (typeof particle_tweens === 'object') {
+
+				this.tween(particle_tweens, sprite, function(tween_object) {
+
+					tween_object.targets[0].destroy();
+
+					if (!emitter.paused && emitter.particlesLimit && emitter.particlesCount >= emitter.particlesLimit) emitter.pause();
+
+				}, {override: false});
+
+			}
+
+			emitter.particlesCount++;
+
+		}
+
+	},
+
 	getPointInsideEllipse: function(x_length, y_length) {
 
-		var x = _.random(-x_length/2, x_length/2);
+		var x = this.random(-x_length/2, x_length/2);
 
-		var y = _.random(-y_length/2, y_length/2);
+		var y = this.random(-y_length/2, y_length/2);
 
 		if (((x*x)/((x_length/2)*(x_length/2)) + (y*y)/((y_length/2)*(y_length/2))) <= 1) return [x, y];
 
@@ -172,10 +236,20 @@ Class.Mixin(Screen, {
 
 	},
 
+	getPointInsideRectangle: function(x_length, y_length) {
+
+		var x = this.random(-x_length/2, x_length/2);
+
+		var y = this.random(-y_length/2, y_length/2);
+
+		return [x, y];
+
+	},
+
 	getParticleValue: function(value, params) {
 
-		if (_.isArray(value)) return _.random(value[0], value[1]);
-		else if (_.isFunction(value)) return value.apply(this, params || []);
+		if (this.isArray(value)) return this.random(value[0], value[1]);
+		else if (typeof value === 'function') return value.apply(this, params || []);
 		return value;
 
 	}

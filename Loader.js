@@ -40,6 +40,8 @@ var Loader = {
 
 		req.addEventListener("load", function (event) {
 
+			Loader.updateLoadProgress(Loader.loadingProgressCodePercent);
+
 			var s = document.createElement("script");
 
 			s.innerHTML = event.target.responseText; // or: s[s.innerText!=undefined?"innerText":"textContent"] = e.responseText
@@ -58,15 +60,9 @@ var Loader = {
 
 					Loader.updateLoadProgress(1);
 
-					Loader.loadOverlayEl.style.opacity = 1;
+					Loader.hideLoadProgress();
 
 					Broadcast.off(["Assets Preload Progress", "Assets Preload Complete"], this);
-
-					setTimeout(function() {
-
-						Loader.loadOverlayEl.style.display = 'none';
-
-					}, 1000);
 
 				}, this);
 
@@ -89,6 +85,8 @@ var Loader = {
 		container.style.width = window.innerWidth + 'px';
 		container.style.height = window.innerHeight + 'px';
 		container.style.lineHeight = window.innerHeight + 'px';
+		container.style.zIndex = '2000';
+		container.style.transition = 'opacity 1s';
 
 		var indicator = this.indicatorEl = document.createElement('div');
 		indicator.className = 'indicator';
@@ -108,6 +106,26 @@ var Loader = {
 		progress.appendChild(complete);
 
 		document.body.appendChild(container);
+
+		window.addEventListener("resize", function() {
+
+			container.style.width = window.innerWidth + 'px';
+			container.style.height = window.innerHeight + 'px';
+			container.style.lineHeight = window.innerHeight + 'px';
+
+		});
+
+	},
+
+	hideLoadProgress: function() {
+
+		Loader.loadOverlayEl.style.opacity = 0;
+
+		setTimeout(function() {
+
+			Loader.loadOverlayEl.style.display = 'none';
+
+		}, 1000);
 
 	},
 
@@ -170,7 +188,7 @@ var Loader = {
 
 	setupCss: function () {
 
-		var style = document.createElement("style");
+		var style = this.styleEl = document.createElement("style");
 		style.appendChild(document.createTextNode(
 			"html, body {" +
 				"width: 100%;" +

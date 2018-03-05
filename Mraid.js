@@ -10,10 +10,6 @@
 
 var MRAID = {
 
-	targetURL: '',
-
-	webMode: 'alert', //'alert', 'redirect' or 'none'
-
 	start: function(is_show_logger) {
 
 		if (is_show_logger) this.showLogger();
@@ -22,9 +18,45 @@ var MRAID = {
 
 		this.checkReady(function() {
 
-			if (window.mraidReady) window.mraidReady();
+			if (this.isMRAID) {
 
-			else MRAID.showApp();
+				if (mraid.isViewable){
+
+					mraid.addEventListener("viewableChange", function (is_viewable) {
+
+						MRAID.isViewable = is_viewable;
+
+						if (MRAID.isViewable) Broadcast.call("MRAID Viewable");
+						else Broadcast.call("MRAID Hidden");
+
+					});
+
+					MRAID.isViewable = mraid.isViewable();
+
+					if (MRAID.isViewable) Broadcast.call("MRAID Viewable");
+					else Broadcast.call("MRAID Hidden");
+
+				} else {
+
+					mraid.addEventListener("stateChange", function (state) {
+
+						MRAID.isViewable = state !== "hidden";
+
+						if (MRAID.isViewable) Broadcast.call("MRAID Viewable");
+						else Broadcast.call("MRAID Hidden");
+
+					});
+
+					MRAID.isViewable = mraid.getState() !== "hidden";
+
+					if (MRAID.isViewable) Broadcast.call("MRAID Viewable");
+					else Broadcast.call("MRAID Hidden");
+
+				}
+
+			}
+
+			Broadcast.call("MRAID Ready");
 
 		});
 
@@ -59,13 +91,13 @@ var MRAID = {
 			element = document.createElement("meta");
 
 			element.name = "viewport";
-			element.content = "width=device-width,initial-scale=1,maximum-scale=1";
+			element.content = "width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover";
 
 			document.getElementsByTagName('head')[0].appendChild(element);
 
 		} else {
 
-			element.content = "width=device-width,initial-scale=1,maximum-scale=1";
+			element.content = "width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover";
 
 		}
 
@@ -115,8 +147,6 @@ var MRAID = {
 
 	checkReady: function (next) {
 
-		this.log('checkReady');
-
 		var readyStateCheckInterval = setInterval(function () {
 
 			if (document.readyState === "complete") {
@@ -135,15 +165,24 @@ var MRAID = {
 
 		if (this.isMRAID) {
 
-			if (mraid.getState() == 'loading') {
+			if (mraid.getState() === 'loading') {
 
 				mraid.addEventListener("ready", function () {
-
-					MRAID.log('mraid ready');
 
 					mraid.removeEventListener("ready", arguments.callee);
 
 					MRAID._mraidReady = true;
+
+					//On some SDK it works only after mraid ready
+					if (Settings["custom-close-button"]) {
+
+						if (mraid.usecustomclose) mraid.usecustomclose(true);
+
+						if (mraid.useCustomClose) mraid.useCustomClose(true);
+
+						if (mraid.setExpandProperties) mraid.setExpandProperties({"useCustomClose":true});
+
+					}
 
 					MRAID._checkReady(next);
 
@@ -152,6 +191,17 @@ var MRAID = {
 			} else {
 
 				this._mraidReady = true;
+
+				//On some SDK it works only after mraid ready
+				if (Settings["custom-close-button"]) {
+
+					if (mraid.usecustomclose) mraid.usecustomclose(true);
+
+					if (mraid.useCustomClose) mraid.useCustomClose(true);
+
+					if (mraid.setExpandProperties) mraid.setExpandProperties({"useCustomClose":true});
+
+				}
 
 				this._checkReady(next);
 
@@ -171,7 +221,9 @@ var MRAID = {
 
 		if (this._mraidReady && this._domReady) {
 
-			if (next) next();
+			this.isReady = true;
+
+			if (next) next.call(MRAID);
 
 		}
 
@@ -189,21 +241,19 @@ var MRAID = {
 
 			});
 
-			if (mraid.usecustomclose) mraid.usecustomclose(true);
-
-			if (mraid.useCustomClose) mraid.useCustomClose(true);
-
 		}
 
-		setTimeout(function() {
+		if (Settings["custom-close-button"]) {
 
-			MRAID.isCloseButtonShowed = true;
+			setTimeout(function () {
 
-			Broadcast.call("MRAID Show Close Button");
+				MRAID.isCloseButtonShowed = true;
 
-		}, 5000);
+				Broadcast.call("MRAID Show Close Button");
 
-		App.start();
+			}, Settings["custom-close-button"]);
+
+		}
 
 	},
 
@@ -211,19 +261,19 @@ var MRAID = {
 
 		if (this.isMRAID) mraid.close();
 
-		else if (this.webMode === 'alert') alert('Close!');
+		else if (Settings["web-mode"] === 'alert') alert('Close!');
 
-		else if (this.webMode === 'redirect') window.close();
+		else if (Settings["web-mode"] === 'redirect') window.close();
 
 	},
 
 	open: function() {
 
-		if (this.isMRAID) mraid.open(this.targetURL);
+		if (this.isMRAID) mraid.open(Settings["target-url"]);
 
-		else if (this.webMode === 'alert') alert('Open: ' + this.targetURL);
+		else if (Settings["web-mode"] === 'alert') alert('Open: ' + Settings["target-url"]);
 
-		else if (this.webMode === 'redirect') window.location.href = this.targetURL;
+		else if (Settings["web-mode"] === 'redirect') window.location.href = Settings["target-url"];
 
 	},
 
@@ -242,6 +292,24 @@ var MRAID = {
 		element.setAttribute("src", "https://getfirebug.com/firebug-lite.js");
 
 		document.getElementsByTagName('head')[0].appendChild(element);
+
+	},
+
+	processSettings: function(settings) {
+
+		settings['start-time'] = Date.now();
+
+		for (var key in settings) if (settings.hasOwnProperty(key)) {
+
+			var data = settings[key];
+
+			if (data && data.type) settings[key] = ('value' in data) ? data.value : data.default;
+
+			else settings[key] = data;
+
+			settings[key].data = data;
+
+		}
 
 	}
 
