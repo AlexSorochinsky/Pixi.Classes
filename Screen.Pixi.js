@@ -10,7 +10,7 @@
 
 Class.Mixin(Screen, {
 
-	buildChild: function(container, child_params, is_reposition) {
+	buildChild: function(container, child_params) {
 
 		var child, i;
 
@@ -88,7 +88,7 @@ Class.Mixin(Screen, {
 
 			}, this);
 
-			child = new PIXI.extras.MovieClip(frames);
+			child = new PIXI.extras.AnimatedSprite(frames);
 
 			child.animationSpeed = child_params.speed || 1;
 
@@ -263,9 +263,11 @@ Class.Mixin(Screen, {
 
 		if (params.image) {
 
-			if (params.image !== child.params.image && child.params.type === 'sprite') {
+			var texture = this.getTexture(params.image);
 
-				child.texture = PIXI.Texture.fromFrame(params.image);
+			if (child.params.type === 'sprite' && texture !== child.texture) {
+
+				child.texture = texture;
 
 			}
 
@@ -428,6 +430,22 @@ Class.Mixin(Screen, {
 					child.fillAlpha = shape[8] || 1;
 
 					child.arc(this.calculate(shape[1]), this.calculate(shape[2]), this.calculate(shape[3]), this.calculate(shape[4]), this.calculate(shape[5]));
+
+				} else if (shape[0] === 'path') {
+
+					child.lineStyle(shape[2], this.toHex(shape[3]));
+
+					child.fillAlpha = shape[4] || 1;
+
+					var path = shape[1];
+
+					child.moveTo(path[0], path[1]);
+
+					for (var i=1; i<path.length/2; i++) {
+
+						child.lineTo(path[i*2], path[i*2+1]);
+
+					}
 
 				}
 
@@ -808,12 +826,6 @@ Class.Mixin(Screen, {
 	bringToTop: function() {
 
 		for (var i = 0; this._containers[i]; i++) App.Stage.addChild(this._containers[i]);
-
-	},
-	
-	makeZOrdering: function(container) {
-
-		//TODO: Use pixi.display to enable z order rendering
 
 	}
 

@@ -18,6 +18,8 @@ Class.Mixin(Game, {
 
 		createjs.Ticker.timingMode = createjs.Ticker.RAF;
 
+		PIXI.settings.PRECISION_FRAGMENT = this.PrecisionFragment || PIXI.settings.PRECISION_FRAGMENT;
+
 		if (this.IsCreateGame) {
 
 			var options = {
@@ -56,46 +58,6 @@ Class.Mixin(Game, {
 			App.create();
 
 		}, {strategy: 'preload'});
-
-		if (App.Loader.pixiLoader) {
-
-			App.Loader.pixiLoader.on("progress", function () {
-
-				Broadcast.call('Game Load Progress', [App.Loader]);
-
-			});
-
-			App.Loader.pixiLoader.load(_.bind(function (pixi_loader, resources) {
-
-				App.resources = resources;
-
-				_.each(resources, function (item, index) {
-
-					if (App.Assets[index]) {
-
-						App.Assets[index].data = item;
-						App.Assets[index].loaded = true;
-
-					} else {
-
-						App.Assets[index] = {
-							data: item,
-							loaded: true
-						};
-
-					}
-
-				});
-
-				App.Loader.states['image'] = 'ready';
-				App.Loader.states['atlas'] = 'ready';
-				App.Loader.states['bitmap-font'] = 'ready';
-
-				App.Loader.check();
-
-			}, this));
-
-		}
 
 	},
 
@@ -169,29 +131,64 @@ Class.Mixin(Game, {
 
 		if (sounds && sounds.length > 0) {
 
-			if (!createjs.Sound) throw new Error('SoundJS not found.');
+			if (!PIXI.sound) throw new Error('PIXI.sound not found.');
 
-			for (var i=0; sounds[i]; i++) createjs.Sound.registerSound(sounds[i][1], sounds[i][0]);
+			for (var i=0; sounds[i]; i++) {
 
-			createjs.Sound.on("fileload", function(event) {
+				loader.pixiLoader.add(sounds[i][0], sounds[i][1], {crossOrigin: "*"})
 
-				Broadcast.call("Sound Loaded", [event.id]);
-
-				//TODO: Check sounds loading process
-				App.Assets[event.id].loaded = true;
-
-				//TODO: Wait all sounds before load complete callback
-				loader.states['sound'] = 'ready';
-
-				loader.check();
-
-			}, this);
+			}
 
 		} else {
 
 			loader.states['sound'] = 'ready';
 
 			loader.check();
+
+		}
+
+	},
+
+	loadSources: function(loader) {
+
+		if (loader.pixiLoader) {
+
+			loader.pixiLoader.on("progress", function () {
+
+				Broadcast.call('Game Load Progress', [loader]);
+
+			});
+
+			loader.pixiLoader.load(_.bind(function (pixi_loader, resources) {
+
+				_.each(resources, function (item, index) {
+
+					App.resources[index] = item;
+
+					if (App.Assets[index]) {
+
+						App.Assets[index].data = item;
+						App.Assets[index].loaded = true;
+
+					} else {
+
+						App.Assets[index] = {
+							data: item,
+							loaded: true
+						};
+
+					}
+
+				});
+
+				loader.states['image'] = 'ready';
+				loader.states['atlas'] = 'ready';
+				loader.states['bitmap-font'] = 'ready';
+				loader.states['sound'] = 'ready';
+
+				loader.check();
+
+			}, this));
 
 		}
 
@@ -322,27 +319,9 @@ Class.Mixin(Game, {
 
 	play: function(name, volume, is_loop) {
 
-		if (createjs.Sound.loadComplete(name)) {
+		if (this.resources[name]) {
 
-			var instance = createjs.Sound.play(name);
-
-			instance._looping = !!is_loop;
-
-			instance.volume = volume || 1;
-
-			instance.on("complete", function() {
-
-				if (instance._looping) {
-
-					instance.position = 0;
-
-					instance.play();
-
-				}
-
-			}, this);
-
-			return instance;
+			return PIXI.sound.play(name, {loop: !!is_loop});
 
 		}
 

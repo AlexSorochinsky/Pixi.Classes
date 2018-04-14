@@ -59,14 +59,14 @@ Class.Mixin(Screen, {
 		emitter.particleSpeed = child_params.particleSpeed;
 		emitter.particleAcceleration = child_params.particleAcceleration;
 
-		emitter.skipUpdate = !emitter.particleSpeed && !emitter.particleAcceleration;
-
 		emitter.particleTween = child_params.particleTween;
 		if (_.isString(emitter.particleTween) && emitter.particleTween.indexOf('#') === 0) emitter.particleTween = this[emitter.particleTween.substr(1)];
 
 		emitter.paused = true;
 
 		emitter.emit = this.bind(function() {
+
+			emitter.skipUpdate = !emitter.particleSpeed && !emitter.particleAcceleration;
 
 			emitter.tick = 0;
 
@@ -202,25 +202,33 @@ Class.Mixin(Screen, {
 
 			}
 
+			if (emitter.onParticleCreate) emitter.onParticleCreate.apply(this, [emitter, sprite]);
+
 			var particle_tweens = emitter.particleTween;
 
 			if (typeof particle_tweens === 'function') particle_tweens = particle_tweens.apply(this, [sprite]);
 
 			if (typeof particle_tweens === 'object') {
 
-				this.tween(particle_tweens, sprite, function(tween_object) {
+				if (!('override' in particle_tweens)) particle_tweens.override = false;
+
+				var particle_tween = this.tween(particle_tweens, sprite, function(tween_object) {
 
 					tween_object.targets[0].destroy();
 
-					if (!emitter.paused && emitter.particlesLimit && emitter.particlesCount >= emitter.particlesLimit) emitter.pause();
+					if (!emitter.paused && emitter.particlesLimit && emitter.particlesCount >= emitter.particlesLimit && emitter.children.length === 0) emitter.pause();
 
-				}, {override: false});
+				});
+
+				if (emitter.onTween) emitter.onTween.apply(this, [emitter, sprite, particle_tween]);
 
 			}
 
 			emitter.particlesCount++;
 
 		}
+
+		if (emitter.onWave) emitter.onWave.apply(this, [emitter, sprite]);
 
 	},
 

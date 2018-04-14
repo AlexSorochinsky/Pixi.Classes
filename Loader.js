@@ -20,6 +20,8 @@ var Loader = {
 
 	load: function (src, next) {
 
+		if (Settings["loading-code-progress-percent"]) Loader.loadingProgressCodePercent = Settings["loading-code-progress-percent"];
+
 		this.setup();
 
 		this.showLoadProgress();
@@ -97,11 +99,11 @@ var Loader = {
 		text.innerText = 'Loading...';
 		indicator.appendChild(text);
 
-		var progress = document.createElement('div');
+		var progress = this.loadProgressEl = document.createElement('div');
 		progress.className = 'progress';
 		indicator.appendChild(progress);
 
-		var complete = this.loadProgressEl = document.createElement('div');
+		var complete = this.loadProgressFillEl = document.createElement('div');
 		complete.className = 'complete';
 		progress.appendChild(complete);
 
@@ -131,7 +133,7 @@ var Loader = {
 
 	updateLoadProgress: function(percent) {
 
-		this.loadProgressEl.style.width = Math.round(percent*100) + '%';
+		this.loadProgressFillEl.style.width = Math.round(percent*100) + '%';
 
 	},
 
@@ -249,4 +251,98 @@ var Loader = {
 
 	}
 
+};
+
+window.onload = function() {
+
+	MRAID.processSettings(Settings);
+
+	MRAID.start();
+
+	if (Settings["google-analytics-key"]) {
+
+		(function (i, s, o, g, r, a, m) {
+			i['GoogleAnalyticsObject'] = r;
+			i[r] = i[r] || function () {
+					(i[r].q = i[r].q || []).push(arguments)
+				}, i[r].l = 1 * new Date();
+			a = s.createElement(o),
+				m = s.getElementsByTagName(o)[0];
+			a.async = 1;
+			a.src = g;
+			m.parentNode.insertBefore(a, m)
+		})(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+
+		ga('create', Settings["google-analytics-key"], 'auto');
+		ga('send', 'pageview');
+
+		MRAID.track('Main Events', 'URL Loaded');
+
+	}
+
+	if (Settings["game-code-url"]) {
+
+		Loader.load(Settings['assets-path'] + Settings["game-code-url"], function () {
+
+			MRAID.track('Main Events', 'Game Code Loaded');
+
+			if (window.App) {
+
+				App.srcURL = Settings["assets-path"];
+
+				App.start();
+
+			}
+
+		});
+
+	} else {
+
+		Loader.setup();
+
+		Loader.showLoadProgress();
+
+		if (window.App) {
+
+			App.srcURL = Settings["assets-path"];
+
+			App.start();
+
+		}
+
+	}
+
+	Loader.loadOverlayEl.onclick = function () {
+
+		if (Settings['loading-click-out'] && !Settings["rewarded-timeout"]) {
+
+			MRAID.track('Main Events', 'CTA click - Loading screen');
+
+			MRAID.open();
+
+		}
+
+	};
+
+	Loader.logoEl.style.backgroundSize = "100%";
+	Loader.logoEl.style.width = '150px';
+	Loader.logoEl.style.height = '150px';
+	Loader.logoEl.style.margin = '0px 0px 20px 0px';
+
+	Loader.indicatorEl.style.verticalAlign = 'middle';
+	Loader.indicatorEl.style.width = '300px';
+	Loader.indicatorEl.style.height = '130px';
+	Loader.indicatorEl.style.margin = '-100px 0 0 -150px';
+	Loader.indicatorEl.style.left = '50%';
+	Loader.indicatorEl.style.top = '50%';
+	Loader.indicatorEl.style.position = 'absolute';
+	Loader.indicatorEl.style.textAlign = 'center';
+
+	Loader.logoEl.innerText = ' ';
+
+	MRAID.extendStyles(Loader.loadOverlayEl, Settings["loading-background-styles"]);
+	MRAID.extendStyles(Loader.logoEl, Settings["loading-icon-styles"]);
+	MRAID.extendStyles(Loader.indicatorEl, Settings["loading-indicator-styles"]);
+	MRAID.extendStyles(Loader.loadProgressEl, Settings["loading-progress-styles"]);
+	MRAID.extendStyles(Loader.loadProgressFillEl, Settings["loading-progress-fill-styles"]);
 };

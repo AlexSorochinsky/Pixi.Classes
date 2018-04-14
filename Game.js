@@ -142,7 +142,7 @@ var Game = new Class({
 
 					if (typeof url === 'function') url = url.call(App);
 
-					if (url.indexOf('http') !== 0) url = App.srcURL + url;
+					if (url.indexOf('http') !== 0 && url.indexOf('data:') !== 0) url = App.srcURL + url;
 
 					if (!loader.states[asset.type]) {
 
@@ -247,7 +247,7 @@ var Game = new Class({
 				timeout: 5000
 			};
 
-			if (window.WebFont) window.WebFont.load();
+			if (window.WebFont) window.WebFont.load(window.WebFontConfig);
 
 			else {
 
@@ -355,7 +355,7 @@ var Game = new Class({
 
 	loadSources: function() {
 
-		//Just for redeclare in App.js for loading unknown type of assets
+		//Just for redeclare in Game.Pixi.js and Game.Phaser.js for loading framework specific type of assets
 
 	},
 

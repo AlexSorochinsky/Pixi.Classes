@@ -85,6 +85,8 @@ var Screen = new Class({
 
 		var result = [];
 
+		childs = _.sortBy(childs, "zIndex");
+
 		this.each(childs, function(child_params) {
 
 			var child = this.buildChild(container, child_params, is_reposition);
