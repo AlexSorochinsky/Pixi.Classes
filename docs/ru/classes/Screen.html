@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Screen - Pixi.Classes API</title>
+    <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
+    <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
+    <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
+    <link rel="icon" href="../assets/favicon.ico">
+    <script src="http://yui.yahooapis.com/combo?3.9.1/build/yui/yui-min.js"></script>
+</head>
+<body class="yui3-skin-sam">
+
+<div id="doc">
+    <div id="hd" class="yui3-g header">
+        <div class="yui3-u-3-4">
+                <h1><img src="../assets/css/logo.png" title="Pixi.Classes API" width="117" height="52"></h1>
+        </div>
+        <div class="yui3-u-1-4 version">
+            <em>API Docs for: 1.0.0</em>
+        </div>
+    </div>
+    <div id="bd" class="yui3-g">
+
+        <div class="yui3-u-1-4">
+            <div id="docs-sidebar" class="sidebar apidocs">
+                <div id="api-list">
+                    <h2 class="off-left">APIs</h2>
+                    <div id="api-tabview" class="tabview">
+                        <ul class="tabs">
+                            <li><a href="#api-classes">Classes</a></li>
+                            <li><a href="#api-modules">Modules</a></li>
+                        </ul>
+                
+                        <div id="api-tabview-filter">
+                            <input type="search" id="api-filter" placeholder="Type to filter APIs">
+                        </div>
+                
+                        <div id="api-tabview-panel">
+                            <ul id="api-classes" class="apis classes">
+                                <li><a href="../classes/Screen.html">Screen</a></li>
+                            </ul>
+                
+                
+                            <ul id="api-modules" class="apis modules">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="yui3-u-3-4">
+                <div id="api-options">
+                    Show:
+                    <label for="api-show-inherited">
+                        <input type="checkbox" id="api-show-inherited" checked>
+                        Inherited
+                    </label>
+            
+                    <label for="api-show-protected">
+                        <input type="checkbox" id="api-show-protected">
+                        Protected
+                    </label>
+            
+                    <label for="api-show-private">
+                        <input type="checkbox" id="api-show-private">
+                        Private
+                    </label>
+                    <label for="api-show-deprecated">
+                        <input type="checkbox" id="api-show-deprecated">
+                        Deprecated
+                    </label>
+            
+                </div>
+            
+            <div class="apidocs">
+                <div id="docs-main">
+                    <div class="content">
+<h1>Screen Class</h1>
+<div class="box meta">
+
+
+        <div class="foundat">
+            Defined in: <a href="../files/Screen.js.html#l46"><code>Screen.js:46</code></a>
+        </div>
+
+
+</div>
+
+
+<div class="box intro">
+    <p>Этот класс создаёт дерево отображаемых объектов (спрайтов), которые могут быть легко добавлены и удалены из сцены как один логический объект.</p>
+<p>Пример использования:</p>
+<pre class="code prettyprint"><code>    App.Gameplay = new Screen({
+
+        Name: &quot;Gameplay&quot;,
+
+        Assets: [
+            {name: 'background.jpg', type: 'image', path: 'Images/background.jpg'}
+        ],
+
+        Containers: [
+            {name: 'BackgroundContainer', childs: [
+                {name: 'background', type: 'sprite', image: 'background.jpg', position: [100, 100], button: true}
+            ]}
+        ],
+
+        Events: {
+
+            'Gameplay build': function(){
+
+                this.someProperty = 'value';
+
+                this['background'].position.set(200, 300)
+
+            },
+
+            'Gameplay showed': function() {
+
+                this.someMethod();
+
+            },
+
+            'Gameplay background click': function(sprite, event) {
+
+                //Функция подписчик на событие click для background спрайта
+
+            },
+
+            'Stage Press Up': function() {
+
+                //Функция подписчик на глобальное событие нажатия на сцену
+
+            }
+
+        },
+
+        someMethod: function() {
+
+        }
+
+    });</code></pre>
+
+</div>
+
+    <div class="constructor">
+        <h2>Constructor</h2>
+<div id="method_Screen" class="method item">
+    <h3 class="name"><code>Screen</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>properties</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l46"><code>Screen.js:46</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">properties</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p> 
+Объект с новыми методами и свойствами создаваемого экземпляра Screen</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+    </div>
+
+<div id="classdocs" class="tabview">
+    <ul class="api-class-tabs">
+        <li class="api-class-tab index"><a href="#index">Index</a></li>
+
+            <li class="api-class-tab methods"><a href="#methods">Methods</a></li>
+            <li class="api-class-tab properties"><a href="#properties">Properties</a></li>
+            <li class="api-class-tab events"><a href="#events">Events</a></li>
+    </ul>
+
+    <div>
+        <div id="index" class="api-class-tabpanel index">
+            <h2 class="off-left">Item Index</h2>
+
+                <div class="index-section methods">
+                    <h3>Methods</h3>
+
+                    <ul class="index-list methods">
+                            <li class="index-item method">
+                                <a href="#method_bind">bind</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_build">build</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_buildChilds">buildChilds</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_calculate">calculate</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_checkAssets">checkAssets</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_contains">contains</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_difference">difference</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_each">each</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_extend">extend</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getChildParamsByName">getChildParamsByName</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_getScaleByStrategy">getScaleByStrategy</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_hide">hide</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_indexBy">indexBy</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_isArray">isArray</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_isObject">isObject</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_processOrientationProperties">processOrientationProperties</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_resize">resize</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_resizeChilds">resizeChilds</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_show">show</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_timeout">timeout</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_toHex">toHex</a>
+
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method_update">update</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_updateChildParamsByName">updateChildParamsByName</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_without">without</a>
+
+                            </li>
+                    </ul>
+                </div>
+
+                <div class="index-section properties">
+                    <h3>Properties</h3>
+
+                    <ul class="index-list properties">
+                            <li class="index-item property">
+                                <a href="#property_Containers">Containers</a>
+
+                            </li>
+                            <li class="index-item property">
+                                <a href="#property_Events">Events</a>
+
+                            </li>
+                            <li class="index-item property">
+                                <a href="#property_Name">Name</a>
+
+                            </li>
+                            <li class="index-item property private">
+                                <a href="#property_uniqueIds">uniqueIds</a>
+
+                            </li>
+                    </ul>
+                </div>
+
+
+                <div class="index-section events">
+                    <h3>Events</h3>
+
+                    <ul class="index-list events">
+                            <li class="index-item event">
+                                <a href="#event_before build">before build</a>
+
+                            </li>
+                            <li class="index-item event">
+                                <a href="#event_build">build</a>
+
+                            </li>
+                            <li class="index-item event">
+                                <a href="#event_hided">hided</a>
+
+                            </li>
+                            <li class="index-item event">
+                                <a href="#event_showed">showed</a>
+
+                            </li>
+                            <li class="index-item event">
+                                <a href="#event_update tick &lt;number&gt;">update tick &lt;number&gt;</a>
+
+                            </li>
+                    </ul>
+                </div>
+        </div>
+
+            <div id="methods" class="api-class-tabpanel">
+                <h2 class="off-left">Methods</h2>
+
+<div id="method_bind" class="method item">
+    <h3 class="name"><code>bind</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>fn</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Function</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l27"><code>Screen.Underscore.js:27</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Изменяет контекст переданной функции на текущий экземпляр Screen</p>
+<pre class="code prettyprint"><code>this.bind(function() {
+
+    //'this' здесь будет ссылаться на текущий экземпляр <a href="../classes/Screen.html" class="crosslink">Screen</a>
+
+});</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">fn</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Function</span>:
+                    <p>Новая функция с изменённым контекстом</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_build" class="method item private">
+    <h3 class="name"><code>build</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l183"><code>Screen.js:183</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод где экземпляр класса Screen строит корневые контейнеры его дерева спрайтов.
+Перед созданием корневых контейнеров вызывается событие <a href="../classes/Screen.html#event_before build" class="crosslink">before build</a>
+а после создания всего дерева спрайтов вызывается событие <a href="../classes/Screen.html#event_build" class="crosslink">build</a></p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_buildChilds" class="method item private">
+    <h3 class="name"><code>buildChilds</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l270"><code>Screen.js:270</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод в котором экземпляр Screen создаёт дочерние отображаемые объекты его корневых контейнеров.
+Этот метод вызывает buildChild для каждого корневого контейнера и рекурсивно buildChilds для дочерних объектов.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_calculate" class="method item private">
+    <h3 class="name"><code>calculate</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l494"><code>Screen.js:494</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод который высчитывает значение позиции, масштаба и прочих свойств.
+Значение свойства может быть указано через функцию или строку, а эта функция преобразует его к числу.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_checkAssets" class="method item private">
+    <h3 class="name"><code>checkAssets</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l632"><code>Screen.js:632</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод позволяющий загружать ресурсы только когда они покажутся на экране</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_contains" class="method item">
+    <h3 class="name"><code>contains</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>array</code>
+                </li>
+                <li class="arg">
+                        <code>obj</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l141"><code>Screen.Underscore.js:141</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Возвращает true если значение присутствует в массиве, иначе false. Используется строготипизированное сравнение.</p>
+<pre class="code prettyprint"><code>const arr = [1, null, 6];
+
+if (this.contains(arr, 6)) {
+
+    //Этот код выполнится так как массив содержит число 6
+
+}</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>Массив для поиска</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">obj</code>
+                        <span class="type">Mixed</span>
+
+
+                    <div class="param-description">
+                        <p>Значение для строготипизированного поиска</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p>true если значение присутствует в массиве, иначе false</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_difference" class="method item">
+    <h3 class="name"><code>difference</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>array</code>
+                </li>
+                <li class="arg">
+                        <code>exclude</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Array</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l186"><code>Screen.Underscore.js:186</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Возвращает новый массив содержащий значения из первого массива исключая значения из второго массива</p>
+<pre class="code prettyprint"><code>const arr1 = [1, 2, 5, 6];
+const arr2 = [2, '6'];
+
+let arr = this.difference(arr1, arr2);
+
+//arr будет [1, 5, 6]</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>Массив для фильтрации</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">exclude</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>Значения которые нужно убрать</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Array</span>:
+                    <p>Новый массив содержащий значения из первого массива, исключая значения из второго массива</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_each" class="method item">
+    <h3 class="name"><code>each</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>obj</code>
+                </li>
+                <li class="arg">
+                        <code>fn</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[context=Screen]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l88"><code>Screen.Underscore.js:88</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Запускает функцию для каждого значения массива или объекта и изменяет контекст вызываемой функции.
+Эта функция вызовется 3 раза, по одному разу для каждого значения массива:</p>
+<pre class="code prettyprint"><code>const arr = [1, null, 6];
+
+this.each(arr, function(value, index) {
+
+    //'this' здесь будет ссылаться по-умолчанию на текущий экземпляр <a href="../classes/Screen.html" class="crosslink">Screen</a>
+
+});</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">obj</code>
+                        <span class="type">Array | Object</span>
+
+
+                    <div class="param-description">
+                        <p>Массив или объект для перебора</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">fn</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                        <p>Функция для вызова</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[context=Screen]</code>
+                        <span class="type">Number</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Контекст для функции (по-умолчанию текущий объект <a href="../classes/Screen.html" class="crosslink">Screen</a>)</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_extend" class="method item">
+    <h3 class="name"><code>extend</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>obj1</code>
+                </li>
+                <li class="arg">
+                        <code>obj2</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l342"><code>Screen.Underscore.js:342</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Копирует и перезаписывает все свойства второго объекта в первый объект и возвращает первый объект</p>
+<pre class="code prettyprint"><code>const o1 = {'c': 12, 'e': 14};
+const o2 = {'c': 5, 'd': 8};
+
+this.extend(o1, o2);
+
+//o1 будет {'c': 5, 'e: 14, 'd': 8}</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">obj1</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Объект</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">obj2</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Объект</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>obj1 со свойствами obj2</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getChildParamsByName" class="method item">
+    <h3 class="name"><code>getChildParamsByName</code></h3>
+
+        <span class="paren">()</span>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l673"><code>Screen.js:673</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Возвращает параметры спрайта из дерева контейнеров (<a href="../classes/Screen.html#property_Containers" class="crosslink">Containers</a>) по имени.</p>
+
+    </div>
+
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p> 
+Свойства спрайта из дерева контейнеров <a href="../classes/Screen.html#property_Containers" class="crosslink">Containers</a></p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getScaleByStrategy" class="method item private">
+    <h3 class="name"><code>getScaleByStrategy</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l448"><code>Screen.js:448</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод который высчитывает масштаб корневых контейнеров используя свойство scaleStrategy</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_hide" class="method item">
+    <h3 class="name"><code>hide</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l605"><code>Screen.js:605</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Этот метод скрывает все спрайты и контейнеры используя visible свойство корневых контейнеров.
+Здесь так же происходит отписка от событий Game Update и Game Resize, и запуск события hided.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_indexBy" class="method item">
+    <h3 class="name"><code>indexBy</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>array</code>
+                </li>
+                <li class="arg">
+                        <code>key</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l249"><code>Screen.Underscore.js:249</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Преобразовывает массив объектов в хэш по указанному ключу</p>
+<pre class="code prettyprint"><code>const arr = [{name: 'a', value: 1}, {name: 'b', value: 2}, {name: 'c', value: 3}];
+
+const obj = this.indexBy(arr, 'name');
+
+//obj будет {'a': {name: 'a', value: 1}, 'b': {name: 'b', value: 2}, 'c': {name: 'c', value: 3}}</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>Массив объектов для преобразования</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">key</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Ключ объектов внутри массива, значения которого станут ключами для нового объекта</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Новый объект</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_isArray" class="method item">
+    <h3 class="name"><code>isArray</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>obj
+en:</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l314"><code>Screen.Underscore.js:314</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Проверяет, является ли переданное значение массивом</p>
+<pre class="code prettyprint"><code>const a = [];
+
+if (this.isArray(a)) {
+
+    //Этот код выполнится так как 'a' является объектом
+
+}</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">obj
+en:</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Any value for the check
+Любое значение для проверки</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p>true если переданное значение является массивом, иначе false</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_isObject" class="method item">
+    <h3 class="name"><code>isObject</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>obj
+en:</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l286"><code>Screen.Underscore.js:286</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Проверяет, является ли переданное значение объектом</p>
+<pre class="code prettyprint"><code>var a = {};
+
+if (this.isObject(a)) {
+
+    //Этот код выполнится так как 'a' является объектом
+
+}</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">obj
+en:</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Any value for the check
+Любое значение для проверки</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p>true если переданное значение является объектом, иначе false</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_processOrientationProperties" class="method item">
+    <h3 class="name"><code>processOrientationProperties</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>object</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l399"><code>Screen.js:399</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Этот метод копирует все свойства переданного объекта, которые содержат "Landscape" или "Portrait" в
+такие же свойства, но без "Landscape" и "Portrait". Какое именно свойство использовать зависит
+от текущей ориентации экрана App.Orientation</p>
+<p>Обычно этот метод используется только внутри класса Screen (во время создания дерева спрайтов, изменения размеров экрана и ориентации).</p>
+<pre class="code prettyprint"><code>    var object = {
+        scalePortrait: 1,
+        scaleLandscape: 2,
+        positionPortrait: [200, 300],
+        positionLandscape: [250, 250],
+        image: 'background.png'
+    };
+
+    this.processOrientationProperties(object);
+</code></pre>
+<p>Если Game/Orientation:property = "Landscape" данный объект будет выглядеть так:</p>
+<pre class="code prettyprint"><code>    var object = {
+        scalePortrait: 1,
+        scaleLandscape: 2,
+        scale: 2,
+        positionPortrait: [200, 300],
+        positionLandscape: [250, 250],
+        position: [250, 250],
+        image: 'background.png'
+    };</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">object</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_resize" class="method item private">
+    <h3 class="name"><code>resize</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l342"><code>Screen.js:342</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод, который вызывается из Game класса каждый раз при изменении размеров экрана или смены ориентации.
+Этот метод переустанавливает опять все настройки из <a href="../classes/Screen.html#property_Containers" class="crosslink">Containers</a> всем спрайтам и другим отображаемым объектам.
+Здесь также вызываются события Screen/before resize:event и Screen/resize:event</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_resizeChilds" class="method item private">
+    <h3 class="name"><code>resizeChilds</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l377"><code>Screen.js:377</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод который вызывается из <a href="../classes/Screen.html#method_resize" class="crosslink">resize</a>,
+но так же может использоваться как публичный.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_show" class="method item">
+    <h3 class="name"><code>show</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l574"><code>Screen.js:574</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Этот метод показывает все спрайты и контейнеры используя visible свойство корневых контейнеров.
+Здесь так же происходит подписка на события Game Update и Game Resize, и запуск события showed.</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_timeout" class="method item">
+    <h3 class="name"><code>timeout</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>fn</code>
+                </li>
+                <li class="arg">
+                        <code>time</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Timeout</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l57"><code>Screen.Underscore.js:57</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Запускает функцию через указанное количество миллисекунд и изменяет контекст переданной функции на текущий экземпляр Screen.
+Эта функция вызовется через 1 секунду:</p>
+<pre class="code prettyprint"><code>this.timeout(function() {
+
+    //'this' здесь будет ссылаться на текущий экземпляр <a href="../classes/Screen.html" class="crosslink">Screen</a>
+
+}, 1000);</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">fn</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                        <p>Функция для вызова</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">time</code>
+                        <span class="type">Number</span>
+
+
+                    <div class="param-description">
+                        <p>Время в миллисекундах</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Timeout</span>:
+                    <p>Таймаут идентификатор</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_toHex" class="method item">
+    <h3 class="name"><code>toHex</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>value</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Number</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l771"><code>Screen.js:771</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Преобразует строковое шестнадцатеричное значение цвета в числовое</p>
+<pre class="code prettyprint"><code>const color1 = this.toHex('#ff9900');
+const color2 = this.toHex('#ff9900');
+
+//'color' и 'color2' будут равны 0xff9900</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">value</code>
+                        <span class="type">String | Number</span>
+
+
+                    <div class="param-description">
+                        <p>Строковое шестнадцатеричное значение цвета</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Number</span>:
+                    <p>Числовое шестнадцатеричное значение цвета</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_update" class="method item private">
+    <h3 class="name"><code>update</code></h3>
+
+        <span class="paren">()</span>
+
+
+
+        <span class="flag private">private</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l301"><code>Screen.js:301</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Внутренний метод который вызывается из Game класса каждый тик (при каждой перерисовки экрана)
+Этот метод запускает Screen/screen name update:event и Screen/<screen name> update tick <number>:event события</p>
+
+    </div>
+
+
+
+
+</div>
+<div id="method_updateChildParamsByName" class="method item">
+    <h3 class="name"><code>updateChildParamsByName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>new_child_params</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l706"><code>Screen.js:706</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Устанавливает новые параметры спрайтов в <a href="../classes/Screen.html#property_Containers" class="crosslink">Containers</a> секцию по имени объекта, заменяя старые значения</p>
+<pre class="code prettyprint"><code>App.Gameplay = new Screen({
+
+    Name: "Gameplay",
+
+    Containers: [
+        {name: 'BackgroundContainer', childs: [
+            {name: 'background', type: 'sprite', image: 'background.jpg', position: [100, 100], childs: {
+                {name: 'sprite one', type: 'sprite', image: 'sprite1.png', scale: 2},
+                {name: 'sprite two', type: 'text', styles: {fontSize: '20px'}},
+            }}
+        ]}
+    ]
+
+});
+
+this.updateChildParamsByName({
+    'background': {position: [0, 0]},
+    'sprite one': {scale: 3, position: [10, 20]},
+    'sprite two': {text: '12345', styles: {fontSize: '10px', fontFamily: 'Arial'}}
+});
+
+//Containers станет таким:
+
+Containers: [
+    {name: 'BackgroundContainer', childs: [
+        {name: 'background', type: 'sprite', image: 'background.jpg', position: [0, 0], childs: {
+            {name: 'sprite one', type: 'sprite', image: 'sprite1.png', scale: 3, position: [10, 20]},
+            {name: 'sprite two', type: 'text', text: '12345', styles: {fontSize: '10px', fontFamily: 'Arial'}},
+        }}
+    ]}
+]</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">new_child_params</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Хэш новых свойств спрайтов для <a href="../classes/Screen.html#property_Containers" class="crosslink">Containers</a> секции</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_without" class="method item">
+    <h3 class="name"><code>without</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>array</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[value...]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Array</span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l220"><code>Screen.Underscore.js:220</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Возвращает новый массив содержащий значения из первого массива исключая указанные значения</p>
+<pre class="code prettyprint"><code>let arr = [1, 2, 5, 6];
+
+arr = this.without(arr, 2, 6);
+
+//arr будет [1, 5]</code></pre>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>Массив для фильтрации</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[value...]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Значения которые нужно убрать</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Array</span>:
+                    <p>Новый массив содержащий значения из первого массива исключая указанные значения</p>
+
+            </div>
+        </div>
+
+
+</div>
+            </div>
+
+            <div id="properties" class="api-class-tabpanel">
+                <h2 class="off-left">Properties</h2>
+
+<div id="property_Containers" class="property item">
+    <h3 class="name"><code>Containers</code></h3>
+    <span class="type">Object</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l204"><code>Screen.js:204</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Дерево отображаемых объектов (спрайты и контейнеры). По информации из этого объекта строятся
+автоматически все спрайты, контейнеры и другие отображаемые объекты. Для каждого объекта можно
+указать позицию (position), масштабирование (scale), прозрачность (alpha) и множество других свойств.
+Причём всё это можно указать отдельно для пейзажной и портретной ориентации.</p>
+<pre class="code prettyprint"><code>         App.Gameplay = new Screen({
+
+            Name: &quot;Gameplay&quot;,
+
+            Assets: [
+                {name: 'background.jpg', type: 'image', path: 'Images/background.jpg'}
+            ],
+
+            Containers: [
+                {name: 'BackgroundContainer', childs: [
+                    {name: 'background', type: 'sprite', image: 'background.jpg', positionPortrait: [100, 100], positionLandscape: [200, 200]}
+                ]}
+            ]
+
+        });</code></pre>
+
+    </div>
+
+
+
+</div>
+<div id="property_Events" class="property item">
+    <h3 class="name"><code>Events</code></h3>
+    <span class="type">Object</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l125"><code>Screen.js:125</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Объект с подписчиками событий. Вы можете подписаться здесь на любое событие.
+Все события приложения имеют одну точку запуска (это Broadcast объект). Здесь вы можете подписаться
+на любое событие а не только на события данного экземпляра Screen</p>
+<p>App.Gameplay = new Screen({</p>
+<pre class="code prettyprint"><code>        Name: &quot;Gameplay&quot;,
+
+        Events: {
+
+            'Gameplay showed': function(){
+
+            },
+
+            'Tutorial showed': function() {
+
+            },
+
+            'Stage Press Up': function() {
+
+            }
+
+        }
+
+    });</code></pre>
+
+    </div>
+
+
+
+</div>
+<div id="property_Name" class="property item">
+    <h3 class="name"><code>Name</code></h3>
+    <span class="type">String</span>
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.js.html#l13"><code>Screen.js:13</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Имя экземпляра класса Screen. Это имя используется как префикс для всех событий этого экземпляра.</p>
+<pre class="code prettyprint"><code>App.Gameplay = new Screen({
+
+        Name: &quot;Gameplay&quot;,
+
+        Events: {
+
+            'Gameplay build': function(){
+
+                //Это функция-подписчик события build этого экземляра класса Screen
+
+            },
+
+            'Tutorial build': function(sprite, event) {
+
+                //Это функция-подписчик события build другого экземляра класса Screen
+
+            }
+
+        }
+
+    });</code></pre>
+
+    </div>
+
+
+
+</div>
+<div id="property_uniqueIds" class="property item private">
+    <h3 class="name"><code>uniqueIds</code></h3>
+    <span class="type">Unknown</span>
+
+
+        <span class="flag private">private</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/Screen.Underscore.js.html#l15"><code>Screen.Underscore.js:15</code></a>
+        </p>
+
+
+    </div>
+
+    <div class="description">
+        <p>Свойство хранящее счётчики уникальных индентификаторов для метода uniqueId()</p>
+
+    </div>
+
+
+
+</div>
+            </div>
+
+
+            <div id="events" class="api-class-tabpanel">
+                <h2 class="off-left">Events</h2>
+
+                    <div id="event_before build" class="events item">
+                        <h3 class="name"><code>before build</code></h3>
+                        <span class="type"></span>
+                    
+                    
+                    
+                    
+                    
+                        <div class="meta">
+                                    <p>
+                                    Defined in
+                            <a href="../files/Screen.js.html#l196"><code>Screen.js:196</code></a>
+                            </p>
+                    
+                    
+                        </div>
+                    
+                        <div class="description">
+                            <p>Вызывается перед созданием спрайтов, поэтому можно успеть модифицировать <a href="../classes/Screen.html#property_Containers" class="crosslink">дерево спрайтов</a> класса.</p>
+                    
+                        </div>
+                    
+                    
+                    
+                    </div>
+                    <div id="event_build" class="events item">
+                        <h3 class="name"><code>build</code></h3>
+                        <span class="type"></span>
+                    
+                    
+                    
+                    
+                    
+                        <div class="meta">
+                                    <p>
+                                    Defined in
+                            <a href="../files/Screen.js.html#l258"><code>Screen.js:258</code></a>
+                            </p>
+                    
+                    
+                        </div>
+                    
+                        <div class="description">
+                            <p>Вызывается после того как будут созданы все контейнеры и спрайты. В подписчике на это событие
+                    можно динамически достроить некоторые элементы игры и задать начальные параметры, например счёт установить в 0.</p>
+                    
+                        </div>
+                    
+                    
+                    
+                    </div>
+                    <div id="event_hided" class="events item">
+                        <h3 class="name"><code>hided</code></h3>
+                        <span class="type"></span>
+                    
+                    
+                    
+                    
+                    
+                        <div class="meta">
+                                    <p>
+                                    Defined in
+                            <a href="../files/Screen.js.html#l622"><code>Screen.js:622</code></a>
+                            </p>
+                    
+                    
+                        </div>
+                    
+                        <div class="description">
+                            <p>Вызывается когда текущий скрин скрывается. Перед названием этого события всегда нужно писать <a href="../classes/Screen.html#property_Name" class="crosslink">Name</a> экземпляра Screen</p>
+                    
+                        </div>
+                    
+                    
+                    
+                    </div>
+                    <div id="event_showed" class="events item">
+                        <h3 class="name"><code>showed</code></h3>
+                        <span class="type"></span>
+                    
+                    
+                    
+                    
+                    
+                        <div class="meta">
+                                    <p>
+                                    Defined in
+                            <a href="../files/Screen.js.html#l593"><code>Screen.js:593</code></a>
+                            </p>
+                    
+                    
+                        </div>
+                    
+                        <div class="description">
+                            <p>Вызывается когда текущий скрин показывается на экране. Перед названием этого события всегда нужно писать <a href="../classes/Screen.html#property_Name" class="crosslink">Name</a> экземпляра Screen</p>
+                    
+                        </div>
+                    
+                    
+                    
+                    </div>
+                    <div id="event_update tick &lt;number&gt;" class="events item">
+                        <h3 class="name"><code>update tick &lt;number&gt;</code></h3>
+                        <span class="type"></span>
+                    
+                    
+                    
+                    
+                    
+                        <div class="meta">
+                                    <p>
+                                    Defined in
+                            <a href="../files/Screen.js.html#l324"><code>Screen.js:324</code></a>
+                            </p>
+                    
+                    
+                        </div>
+                    
+                        <div class="description">
+                            <p>Вызывается на каждый тик перерисовки экрана. Перед названием этого события всегда нужно писать <a href="../classes/Screen.html#property_Name" class="crosslink">Name</a> экземпляра Screen</p>
+                    
+                        </div>
+                    
+                    
+                    
+                    </div>
+            </div>
+    </div>
+</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="../assets/vendor/prettify/prettify-min.js"></script>
+<script>prettyPrint();</script>
+<script src="../assets/js/yui-prettify.js"></script>
+<script src="../assets/../api.js"></script>
+<script src="../assets/js/api-filter.js"></script>
+<script src="../assets/js/api-list.js"></script>
+<script src="../assets/js/api-search.js"></script>
+<script src="../assets/js/apidocs.js"></script>
+</body>
+</html>

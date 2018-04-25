@@ -1,0 +1,516 @@
+{
+    "project": {
+        "name": "Pixi.Classes API",
+        "description": "Pixi.Classes library helps develop Pixi applications faster and provide good code style",
+        "version": "1.0.0",
+        "url": "http://example.com/"
+    },
+    "files": {
+        "Screen.Underscore.js": {
+            "name": "Screen.Underscore.js",
+            "modules": {},
+            "classes": {},
+            "fors": {
+                "Screen": 1
+            },
+            "namespaces": {}
+        },
+        "Screen.js": {
+            "name": "Screen.js",
+            "modules": {},
+            "classes": {
+                "Screen": 1
+            },
+            "fors": {},
+            "namespaces": {}
+        }
+    },
+    "modules": {},
+    "classes": {
+        "Screen": {
+            "name": "Screen",
+            "shortname": "Screen",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "Screen.js",
+            "line": 46,
+            "description": " Этот класс создаёт дерево отображаемых объектов (спрайтов), которые могут быть легко добавлены и удалены из сцены как один логический объект.\n\n Пример использования:\n\n\t\tApp.Gameplay = new Screen({\n\n\t\t\tName: \"Gameplay\",\n\n\t\t\tAssets: [\n\t\t\t\t{name: 'background.jpg', type: 'image', path: 'Images/background.jpg'}\n\t\t\t],\n\n\t\t\tContainers: [\n\t\t\t\t{name: 'BackgroundContainer', childs: [\n\t\t\t\t\t{name: 'background', type: 'sprite', image: 'background.jpg', position: [100, 100], button: true}\n\t\t\t\t]}\n\t\t\t],\n\n\t\t\tEvents: {\n\n\t\t\t\t'Gameplay build': function(){\n\n\t\t\t\t\tthis.someProperty = 'value';\n\n\t\t\t\t\tthis['background'].position.set(200, 300)\n\n\t\t\t\t},\n\n\t\t\t\t'Gameplay showed': function() {\n\n\t\t\t\t\tthis.someMethod();\n\n\t\t\t\t},\n\n\t\t\t\t'Gameplay background click': function(sprite, event) {\n\n\t\t\t\t\t//Функция подписчик на событие click для background спрайта\n\n\t\t\t\t},\n\n\t\t\t\t'Stage Press Up': function() {\n\n\t\t\t\t\t//Функция подписчик на глобальное событие нажатия на сцену\n\n\t\t\t\t}\n\n\t\t\t},\n\n\t\t\tsomeMethod: function() {\n\n\t\t\t}\n\n\t\t});",
+            "is_constructor": 1,
+            "params": [
+                {
+                    "name": "properties",
+                    "description": "&nbsp;\n Объект с новыми методами и свойствами создаваемого экземпляра Screen",
+                    "type": "Object"
+                }
+            ]
+        }
+    },
+    "elements": {},
+    "classitems": [
+        {
+            "file": "Screen.Underscore.js",
+            "line": 15,
+            "description": " Свойство хранящее счётчики уникальных индентификаторов для метода uniqueId()",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "property",
+            "name": "uniqueIds",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 27,
+            "description": " Изменяет контекст переданной функции на текущий экземпляр Screen\n\n\tthis.bind(function() {\n\n\t\t//'this' здесь будет ссылаться на текущий экземпляр {{#crossLink \"Screen\"}}{{/crossLink}}\n\n\t});",
+            "itemtype": "method",
+            "name": "bind",
+            "params": [
+                {
+                    "name": "fn",
+                    "description": "",
+                    "type": "Function"
+                }
+            ],
+            "return": {
+                "description": " Новая функция с изменённым контекстом",
+                "type": "Function"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 57,
+            "description": " Запускает функцию через указанное количество миллисекунд и изменяет контекст переданной функции на текущий экземпляр Screen.\n Эта функция вызовется через 1 секунду:\n\n\tthis.timeout(function() {\n\n\t\t//'this' здесь будет ссылаться на текущий экземпляр {{#crossLink \"Screen\"}}{{/crossLink}}\n\n\t}, 1000);",
+            "itemtype": "method",
+            "name": "timeout",
+            "params": [
+                {
+                    "name": "fn",
+                    "description": "\n  Функция для вызова",
+                    "type": "Function"
+                },
+                {
+                    "name": "time",
+                    "description": "\n  Время в миллисекундах",
+                    "type": "Number"
+                }
+            ],
+            "return": {
+                "description": "  Таймаут идентификатор",
+                "type": "Timeout"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 88,
+            "description": " Запускает функцию для каждого значения массива или объекта и изменяет контекст вызываемой функции.\n Эта функция вызовется 3 раза, по одному разу для каждого значения массива:\n\n\tconst arr = [1, null, 6];\n\n\tthis.each(arr, function(value, index) {\n\n\t\t//'this' здесь будет ссылаться по-умолчанию на текущий экземпляр {{#crossLink \"Screen\"}}{{/crossLink}}\n\n\t});",
+            "itemtype": "method",
+            "name": "each",
+            "params": [
+                {
+                    "name": "obj",
+                    "description": "\n Массив или объект для перебора",
+                    "type": "Array|Object"
+                },
+                {
+                    "name": "fn",
+                    "description": "\n Функция для вызова",
+                    "type": "Function"
+                },
+                {
+                    "name": "context",
+                    "description": "\n Контекст для функции (по-умолчанию текущий объект {{#crossLink \"Screen\"}}{{/crossLink}})",
+                    "type": "Number",
+                    "optional": true,
+                    "optdefault": "Screen"
+                }
+            ],
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 141,
+            "description": " Возвращает true если значение присутствует в массиве, иначе false. Используется строготипизированное сравнение.\n\n\tconst arr = [1, null, 6];\n\n\tif (this.contains(arr, 6)) {\n\n\t\t//Этот код выполнится так как массив содержит число 6\n\n\t}",
+            "itemtype": "method",
+            "name": "contains",
+            "params": [
+                {
+                    "name": "array",
+                    "description": "\n Массив для поиска",
+                    "type": "Array"
+                },
+                {
+                    "name": "obj",
+                    "description": "\n  Значение для строготипизированного поиска",
+                    "type": "Mixed"
+                }
+            ],
+            "return": {
+                "description": " true если значение присутствует в массиве, иначе false",
+                "type": "Boolean"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 186,
+            "description": " Возвращает новый массив содержащий значения из первого массива исключая значения из второго массива\n\n\tconst arr1 = [1, 2, 5, 6];\n\tconst arr2 = [2, '6'];\n\n\tlet arr = this.difference(arr1, arr2);\n\n\t//arr будет [1, 5, 6]",
+            "itemtype": "method",
+            "name": "difference",
+            "params": [
+                {
+                    "name": "array",
+                    "description": "\n Массив для фильтрации",
+                    "type": "Array"
+                },
+                {
+                    "name": "exclude",
+                    "description": "\n Значения которые нужно убрать",
+                    "type": "Array"
+                }
+            ],
+            "return": {
+                "description": " Новый массив содержащий значения из первого массива, исключая значения из второго массива",
+                "type": "Array"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 220,
+            "description": " Возвращает новый массив содержащий значения из первого массива исключая указанные значения\n\n\tlet arr = [1, 2, 5, 6];\n\n\tarr = this.without(arr, 2, 6);\n\n\t//arr будет [1, 5]",
+            "itemtype": "method",
+            "name": "without",
+            "params": [
+                {
+                    "name": "array",
+                    "description": "\n Массив для фильтрации",
+                    "type": "Array"
+                },
+                {
+                    "name": "value...",
+                    "description": "\n Значения которые нужно убрать",
+                    "optional": true
+                }
+            ],
+            "return": {
+                "description": " Новый массив содержащий значения из первого массива исключая указанные значения",
+                "type": "Array"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 249,
+            "description": " Преобразовывает массив объектов в хэш по указанному ключу\n\n\tconst arr = [{name: 'a', value: 1}, {name: 'b', value: 2}, {name: 'c', value: 3}];\n\n\tconst obj = this.indexBy(arr, 'name');\n\n\t//obj будет {'a': {name: 'a', value: 1}, 'b': {name: 'b', value: 2}, 'c': {name: 'c', value: 3}}",
+            "itemtype": "method",
+            "name": "indexBy",
+            "params": [
+                {
+                    "name": "array",
+                    "description": "\n Массив объектов для преобразования",
+                    "type": "Array"
+                },
+                {
+                    "name": "key",
+                    "description": "\n Ключ объектов внутри массива, значения которого станут ключами для нового объекта",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": " Новый объект",
+                "type": "Object"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 286,
+            "description": " Проверяет, является ли переданное значение объектом\n\n\tvar a = {};\n\n\tif (this.isObject(a)) {\n\n\t\t//Этот код выполнится так как 'a' является объектом\n\n\t}",
+            "itemtype": "method",
+            "name": "isObject",
+            "params": [
+                {
+                    "name": "obj\nen:",
+                    "description": "Any value for the check\n Любое значение для проверки"
+                }
+            ],
+            "return": {
+                "description": " true если переданное значение является объектом, иначе false",
+                "type": "Boolean"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 314,
+            "description": " Проверяет, является ли переданное значение массивом\n\n\tconst a = [];\n\n\tif (this.isArray(a)) {\n\n \t\t//Этот код выполнится так как 'a' является объектом\n\n\t}",
+            "itemtype": "method",
+            "name": "isArray",
+            "params": [
+                {
+                    "name": "obj\nen:",
+                    "description": "Any value for the check\n Любое значение для проверки"
+                }
+            ],
+            "return": {
+                "description": " true если переданное значение является массивом, иначе false",
+                "type": "Boolean"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.Underscore.js",
+            "line": 342,
+            "description": " Копирует и перезаписывает все свойства второго объекта в первый объект и возвращает первый объект\n\n\tconst o1 = {'c': 12, 'e': 14};\n\tconst o2 = {'c': 5, 'd': 8};\n\n\tthis.extend(o1, o2);\n\n\t//o1 будет {'c': 5, 'e: 14, 'd': 8}",
+            "itemtype": "method",
+            "name": "extend",
+            "params": [
+                {
+                    "name": "obj1",
+                    "description": "\n Объект",
+                    "type": "Object"
+                },
+                {
+                    "name": "obj2",
+                    "description": "\n Объект",
+                    "type": "Object"
+                }
+            ],
+            "return": {
+                "description": " obj1 со свойствами obj2",
+                "type": "Object"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 13,
+            "description": " Имя экземпляра класса Screen. Это имя используется как префикс для всех событий этого экземпляра.\n\n\tApp.Gameplay = new Screen({\n\n\t\t\tName: \"Gameplay\",\n\n\t\t\tEvents: {\n\n\t\t\t\t'Gameplay build': function(){\n\n\t\t\t\t\t//Это функция-подписчик события build этого экземляра класса Screen\n\n\t\t\t\t},\n\n\t\t\t\t'Tutorial build': function(sprite, event) {\n\n\t\t\t\t\t//Это функция-подписчик события build другого экземляра класса Screen\n\n\t\t\t\t}\n\n\t\t\t}\n\n\t\t});",
+            "itemtype": "property",
+            "name": "Name",
+            "type": "String",
+            "required": 1,
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 125,
+            "description": " Объект с подписчиками событий. Вы можете подписаться здесь на любое событие.\n Все события приложения имеют одну точку запуска (это Broadcast объект). Здесь вы можете подписаться\n на любое событие а не только на события данного экземпляра Screen\n\nApp.Gameplay = new Screen({\n\n\t\t\tName: \"Gameplay\",\n\n\t\t\tEvents: {\n\n\t\t\t\t'Gameplay showed': function(){\n\n\t\t\t\t},\n\n\t\t\t\t'Tutorial showed': function() {\n\n\t\t\t\t},\n\n\t\t\t\t'Stage Press Up': function() {\n\n\t\t\t\t}\n\n\t\t\t}\n\n\t\t});",
+            "itemtype": "property",
+            "name": "Events",
+            "type": "Object",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 183,
+            "description": " Внутренний метод где экземпляр класса Screen строит корневые контейнеры его дерева спрайтов.\n Перед созданием корневых контейнеров вызывается событие {{#crossLink \"Screen/before build:event\"}}{{/crossLink}}\n а после создания всего дерева спрайтов вызывается событие {{#crossLink \"Screen/build:event\"}}{{/crossLink}}",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "build",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 196,
+            "description": " Вызывается перед созданием спрайтов, поэтому можно успеть модифицировать {{#crossLink \"Screen/Containers:property\"}}дерево спрайтов{{/crossLink}} класса.",
+            "itemtype": "event",
+            "name": "before build",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 204,
+            "description": " Дерево отображаемых объектов (спрайты и контейнеры). По информации из этого объекта строятся\n автоматически все спрайты, контейнеры и другие отображаемые объекты. Для каждого объекта можно\n указать позицию (position), масштабирование (scale), прозрачность (alpha) и множество других свойств.\n Причём всё это можно указать отдельно для пейзажной и портретной ориентации.\n\n\t\t\t App.Gameplay = new Screen({\n\n\t\t\t\tName: \"Gameplay\",\n\n\t\t\t\tAssets: [\n\t\t\t\t\t{name: 'background.jpg', type: 'image', path: 'Images/background.jpg'}\n\t\t\t\t],\n\n\t\t\t\tContainers: [\n\t\t\t\t\t{name: 'BackgroundContainer', childs: [\n\t\t\t\t\t\t{name: 'background', type: 'sprite', image: 'background.jpg', positionPortrait: [100, 100], positionLandscape: [200, 200]}\n\t\t\t\t\t]}\n\t\t\t\t]\n\n\t\t\t});",
+            "itemtype": "property",
+            "name": "Containers",
+            "type": "Object",
+            "required": 1,
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 258,
+            "description": " Вызывается после того как будут созданы все контейнеры и спрайты. В подписчике на это событие\n можно динамически достроить некоторые элементы игры и задать начальные параметры, например счёт установить в 0.",
+            "itemtype": "event",
+            "name": "build",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 270,
+            "description": " Внутренний метод в котором экземпляр Screen создаёт дочерние отображаемые объекты его корневых контейнеров.\n Этот метод вызывает buildChild для каждого корневого контейнера и рекурсивно buildChilds для дочерних объектов.",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "buildChilds",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 301,
+            "description": " Внутренний метод который вызывается из {{#crossLink \"Game\"}}{{/crossLink}} класса каждый тик (при каждой перерисовки экрана)\n Этот метод запускает {{#crossLink \"Screen/{screen name} update:event\"}}{{/crossLink}} и {{#crossLink \"Screen/<screen name> update tick <number>:event\"}}{{/crossLink}} события",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "update",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 324,
+            "description": " Вызывается на каждый тик перерисовки экрана. Перед названием этого события всегда нужно писать {{#crossLink \"Screen/Name:property\"}}{{/crossLink}} экземпляра Screen",
+            "itemtype": "event",
+            "name": "update tick <number>",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 342,
+            "description": " Внутренний метод, который вызывается из {{#crossLink \"Game\"}}{{/crossLink}} класса каждый раз при изменении размеров экрана или смены ориентации.\n Этот метод переустанавливает опять все настройки из {{#crossLink \"Screen/Containers:property\"}}{{/crossLink}} всем спрайтам и другим отображаемым объектам.\n Здесь также вызываются события {{#crossLink \"Screen/before resize:event\"}}{{/crossLink}} и {{#crossLink \"Screen/resize:event\"}}{{/crossLink}}",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "resize",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 377,
+            "description": " Внутренний метод который вызывается из {{#crossLink \"Screen/resize:method\"}}{{/crossLink}},\n но так же может использоваться как публичный.",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "resizeChilds",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 399,
+            "description": " Этот метод копирует все свойства переданного объекта, которые содержат \"Landscape\" или \"Portrait\" в\n такие же свойства, но без \"Landscape\" и \"Portrait\". Какое именно свойство использовать зависит\n от текущей ориентации экрана App.Orientation\n\n Обычно этот метод используется только внутри класса Screen (во время создания дерева спрайтов, изменения размеров экрана и ориентации).\n\n\t\tvar object = {\n\t\t\tscalePortrait: 1,\n\t\t\tscaleLandscape: 2,\n\t\t\tpositionPortrait: [200, 300],\n\t\t\tpositionLandscape: [250, 250],\n\t\t\timage: 'background.png'\n\t\t};\n\n\t\tthis.processOrientationProperties(object);\n\n Если {{#crossLink \"Game/Orientation:property\"}}App.Orientation{{/crossLink}} = \"Landscape\" данный объект будет выглядеть так:\n\n\t\tvar object = {\n\t\t\tscalePortrait: 1,\n\t\t\tscaleLandscape: 2,\n\t\t\tscale: 2,\n\t\t\tpositionPortrait: [200, 300],\n\t\t\tpositionLandscape: [250, 250],\n\t\t\tposition: [250, 250],\n\t\t\timage: 'background.png'\n\t\t};",
+            "itemtype": "method",
+            "name": "processOrientationProperties",
+            "params": [
+                {
+                    "name": "object",
+                    "description": ""
+                }
+            ],
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 448,
+            "description": " Внутренний метод который высчитывает масштаб корневых контейнеров используя свойство scaleStrategy",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "getScaleByStrategy",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 494,
+            "description": " Внутренний метод который высчитывает значение позиции, масштаба и прочих свойств.\n Значение свойства может быть указано через функцию или строку, а эта функция преобразует его к числу.",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "calculate",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 574,
+            "description": " Этот метод показывает все спрайты и контейнеры используя visible свойство корневых контейнеров.\n Здесь так же происходит подписка на события Game Update и Game Resize, и запуск события showed.",
+            "itemtype": "method",
+            "name": "show",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 593,
+            "description": " Вызывается когда текущий скрин показывается на экране. Перед названием этого события всегда нужно писать {{#crossLink \"Screen/Name:property\"}}{{/crossLink}} экземпляра Screen",
+            "itemtype": "event",
+            "name": "showed",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 605,
+            "description": " Этот метод скрывает все спрайты и контейнеры используя visible свойство корневых контейнеров.\n Здесь так же происходит отписка от событий Game Update и Game Resize, и запуск события hided.",
+            "itemtype": "method",
+            "name": "hide",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 622,
+            "description": " Вызывается когда текущий скрин скрывается. Перед названием этого события всегда нужно писать {{#crossLink \"Screen/Name:property\"}}{{/crossLink}} экземпляра Screen",
+            "itemtype": "event",
+            "name": "hided",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 632,
+            "description": " Внутренний метод позволяющий загружать ресурсы только когда они покажутся на экране",
+            "access": "private",
+            "tagname": "",
+            "itemtype": "method",
+            "name": "checkAssets",
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 673,
+            "description": " Возвращает параметры спрайта из дерева контейнеров ({{#crossLink \"Screen/Containers:property\"}}{{/crossLink}}) по имени.",
+            "itemtype": "method",
+            "name": "getChildParamsByName",
+            "return": {
+                "description": "&nbsp;\n Свойства спрайта из дерева контейнеров {{#crossLink \"Screen/Containers:property\"}}{{/crossLink}}",
+                "type": "Object"
+            },
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 706,
+            "description": " Устанавливает новые параметры спрайтов в {{#crossLink \"Screen/Containers:property\"}}{{/crossLink}} секцию по имени объекта, заменяя старые значения\n\n\tApp.Gameplay = new Screen({\n\n\t\tName: \"Gameplay\",\n\n\t\tContainers: [\n\t\t\t{name: 'BackgroundContainer', childs: [\n\t\t\t\t{name: 'background', type: 'sprite', image: 'background.jpg', position: [100, 100], childs: {\n\t\t\t\t\t{name: 'sprite one', type: 'sprite', image: 'sprite1.png', scale: 2},\n\t\t\t\t\t{name: 'sprite two', type: 'text', styles: {fontSize: '20px'}},\n\t\t\t\t}}\n\t\t\t]}\n\t\t]\n\n\t});\n\n\tthis.updateChildParamsByName({\n\t\t'background': {position: [0, 0]},\n\t\t'sprite one': {scale: 3, position: [10, 20]},\n\t\t'sprite two': {text: '12345', styles: {fontSize: '10px', fontFamily: 'Arial'}}\n\t});\n\n\t//Containers станет таким:\n\n\tContainers: [\n\t\t{name: 'BackgroundContainer', childs: [\n\t\t\t{name: 'background', type: 'sprite', image: 'background.jpg', position: [0, 0], childs: {\n\t\t\t\t{name: 'sprite one', type: 'sprite', image: 'sprite1.png', scale: 3, position: [10, 20]},\n\t\t\t\t{name: 'sprite two', type: 'text', text: '12345', styles: {fontSize: '10px', fontFamily: 'Arial'}},\n\t\t\t}}\n\t\t]}\n\t]",
+            "itemtype": "method",
+            "name": "updateChildParamsByName",
+            "params": [
+                {
+                    "name": "new_child_params",
+                    "description": "\n Хэш новых свойств спрайтов для {{#crossLink \"Screen/Containers:property\"}}{{/crossLink}} секции",
+                    "type": "Object"
+                }
+            ],
+            "class": "Screen"
+        },
+        {
+            "file": "Screen.js",
+            "line": 771,
+            "description": " Преобразует строковое шестнадцатеричное значение цвета в числовое\n\n\tconst color1 = this.toHex('#ff9900');\n\tconst color2 = this.toHex('#ff9900');\n\n\t//'color' и 'color2' будут равны 0xff9900",
+            "itemtype": "method",
+            "name": "toHex",
+            "params": [
+                {
+                    "name": "value",
+                    "description": "\n Строковое шестнадцатеричное значение цвета",
+                    "type": "String|Number"
+                }
+            ],
+            "return": {
+                "description": " Числовое шестнадцатеричное значение цвета",
+                "type": "Number"
+            },
+            "class": "Screen"
+        }
+    ],
+    "warnings": []
+}

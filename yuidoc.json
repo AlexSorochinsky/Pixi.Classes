@@ -1,0 +1,17 @@
+{
+	"name": "Pixi.Classes API",
+	"description": "Pixi.Classes library helps develop Pixi applications faster and provide good code style",
+	"version": "1.0.0",
+	"url": "http://example.com/",
+	"options": {
+		"port": 4000,
+		"nocode": false,
+		"themedir": "./docs/theme",
+		"paths": ["."],
+		"outdir": "./docs/ru",
+		"preprocessor": ["./docs/preprocessors/language-preprocessor.js"],
+		"languages": ["en", "ru"],
+		"language": "ru"
+	}
+}
+
